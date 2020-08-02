@@ -4,7 +4,11 @@
   "description": "Server implementation using Rosetta SDK",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "rosetta-node-sdk": "git://github.com/SmartArray/digibyte-rosetta-nodeapi.git#feature/express-js-server-stub"
   },
   "keywords": [
     "rosetta",
