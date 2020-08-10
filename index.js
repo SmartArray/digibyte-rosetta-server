@@ -21,12 +21,41 @@
 
 const RosettaSDK = require('rosetta-node-sdk');
 
+const config = require('./config');
+const networkIdentifier = require('./config/networkIdentifier');
 const ServiceHandlers = require('./services');
+const DigiByteSyncer = require('./Syncer');
+const DigiByteIndexer = require('./Indexer');
+
+console.log(`                                                                    
+ ____  _     _ _____     _          _____             _   _          _____       _     
+|    \\|_|___|_| __  |_ _| |_ ___   | __  |___ ___ ___| |_| |_ ___   |   | |___ _| |___ 
+|  |  | | . | | __ -| | |  _| -_|  |    -| . |_ -| -_|  _|  _| .'|  | | | | . | . | -_|
+|____/|_|_  |_|_____|_  |_| |___|  |__|__|___|___|___|_| |_| |__,|  |_|___|___|___|___|
+        |___|       |___|                                                              
+
+             Version                  ${config.version}
+             Rosetta Version          ${config.rosettaVersion}
+             DigiByte Node Version    ${config.digibyteVersion}
+             Networks                 ${JSON.stringify(config.serverConfig.networkIdentifiers)}
+             Port                     ${config.port}
+`);
 
 /* Create a server configuration */
 const Server = new RosettaSDK.Server({
-  URL_PORT: 8080,
+  URL_PORT: config.port,
 });
+
+const historicalBalanceLookup = false;
+
+const asserter = RosettaSDK.Asserter.NewServer(
+  config.serverConfig.operationTypesList,
+  historicalBalanceLookup,
+  config.serverConfig.networkIdentifiers,
+);
+
+// Register global asserter
+Server.useAsserter(asserter);
 
 /* Data API: Network */
 Server.register('/network/list', ServiceHandlers.Network.networkList);
@@ -47,3 +76,16 @@ Server.register('/mempool/transaction', ServiceHandlers.Mempool.mempoolTransacti
 /* Data API: Construction */
 Server.register('/construction/metadata', ServiceHandlers.Construction.constructioMetadata);
 Server.register('/construction/submit', ServiceHandlers.Construction.constructionSubmit);
+
+/* Initialize Syncer and Indexer */
+const Indexer = new DigiByteIndexer(config.data);
+const Syncer = new DigiByteSyncer(config.syncer, Indexer);
+
+Indexer.initIndexer()
+  .then(() => console.log(`Starting sync from block height ${Indexer.lastBlockSymbol}`))
+  .then(() => Syncer.initSyncer())
+  .then(() => Syncer.sync(Indexer.lastBlockSymbol, 1000000))
+  .catch((e) => {
+    console.error(`Could not start sync: ${e.message}`);
+    console.error(e);
+  });

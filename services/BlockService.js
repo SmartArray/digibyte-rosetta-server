@@ -20,6 +20,14 @@
  */
 
 const RosettaSDK = require('rosetta-node-sdk');
+const Types = RosettaSDK.Client;
+
+const Config = require('../config');
+const rpc = require('../rpc');
+const utils = require('../utils');
+const Errors = require('../config/errors');
+
+const SyncBlockCache = require('../syncBlockCache');
 
 /* Data API: Block */
 
@@ -32,7 +40,58 @@ const RosettaSDK = require('rosetta-node-sdk');
 * */
 const block = async (params) => {
   const { blockRequest } = params;
-  return {};
+
+  if (blockRequest.block_identifier.index != null && !blockRequest.block_identifier.hash) {
+    // Get block hash if only index is set.
+    const hashResponse = await rpc.getBlockHashAsync(blockRequest.block_identifier.index);
+    blockRequest.block_identifier.hash = hashResponse.result;
+  }
+
+  const blockResponse = await rpc.getBlockAsync(blockRequest.block_identifier.hash, 2);
+  const blockData = blockResponse.result;
+  if (!blockData) {
+    throw Errors.COULD_NOT_FETCH_BLOCK;
+  }
+
+  // Save the block in the block cache, so that the internal syncer
+  // can still use the original data in order to index the utxo set.
+  SyncBlockCache.put(
+    blockData.hash,
+    blockData,
+  );
+
+  /* Create a Full Block Identifier */
+  let queriedBlock = new Types.BlockIdentifier(
+    blockData.height,
+    blockData.hash,
+  );
+
+  let parentBlock;
+
+  if (queriedBlock.index == 0) {
+    parentBlock = new Types.BlockIdentifier(
+      blockData.height,
+      blockData.hash,
+    )
+  } else {
+    parentBlock = new Types.BlockIdentifier(
+      blockData.height - 1,
+      blockData.previousblockhash,
+    );
+  }
+
+  const block = Types.Block.constructFromObject({
+    block_identifier: queriedBlock,
+    parent_block_identifier: parentBlock,
+    timestamp: blockData.time * 1000,
+    transactions: blockData.tx.map(tx => 
+      utils.transactionToRosettaType(tx)
+    ),
+    metadata: utils.blockMetadata(blockData),
+  });
+
+  const otherTransactions = [];
+  return new Types.BlockResponse(block, otherTransactions);
 };
 
 /**
@@ -43,8 +102,7 @@ const block = async (params) => {
 * returns BlockTransactionResponse
 * */
 const blockTransaction = async (params) => {
-  const { blockTransactionRequest } = params;
-  return {};
+  throw Errors.ENDPOINT_DISABLED;
 };
 
 module.exports = {

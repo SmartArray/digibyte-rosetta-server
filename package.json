@@ -5,10 +5,15 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js"
+    "start": "node index.js",
+    "dev": "nodemon ."
   },
   "dependencies": {
-    "rosetta-node-sdk": "git://github.com/SmartArray/digibyte-rosetta-nodeapi.git#feature/express-js-server-stub"
+    "bitcoind-rpc": "^0.8.1",
+    "bluebird": "^3.7.2",
+    "js-binary": "^1.2.0",
+    "level": "^6.0.1",
+    "rosetta-node-sdk": "file:///Users/julianjager/Desktop/Projects/Digibyte/digibyte-rosetta-nodeapi"
   },
   "keywords": [
     "rosetta",
@@ -17,5 +22,9 @@
     "server"
   ],
   "author": "yoshijaeger",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^8.1.1"
+  }
 }

@@ -20,7 +20,11 @@
  */
 
 const RosettaSDK = require('rosetta-node-sdk');
+const Types = RosettaSDK.Client;
 
+const Config = require('../config');
+const rpc = require('../rpc');
+const Errors = require('../config/errors');
 
 /* Data API: Network */
 
@@ -33,7 +37,12 @@ const RosettaSDK = require('rosetta-node-sdk');
 * */
 const networkList = async (params) => {
   const { metadataRequest } = params;
-  return {};
+
+  const response = new Types.NetworkListResponse(
+    Config.serverConfig.networkIdentifiers,
+  );
+
+  return response;
 };
 
 /**
@@ -45,7 +54,20 @@ const networkList = async (params) => {
 * */
 const networkOptions = async (params) => {
   const { networkRequest } = params;
-  return {};
+
+  const version = new Types.Version(
+    Config.rosettaVersion,
+    Config.digibyteVersion,
+  );
+
+  const allow = new Types.Allow(
+    Config.serverConfig.operationStatusesList,
+    Config.serverConfig.operationTypesList,
+    Config.serverConfig.errorsList,
+    Config.serverConfig.historicalBalanceLookup,
+  );
+
+  return new Types.NetworkOptionsResponse(version, allow);
 };
 
 /**
@@ -57,7 +79,50 @@ const networkOptions = async (params) => {
 * */
 const networkStatus = async (params) => {
   const { networkRequest } = params;
-  return {};
+
+  let currentBlockIdentifier;
+  let currentBlockTimestamp;
+  let genesisBlockIdentifier;
+  let peers;
+
+  try {
+    const info = await rpc.getBlockchainInfoAsync();
+    currentBlockIdentifier = new Types.BlockIdentifier(
+      info.result.blocks, // height
+      info.result.bestblockhash, // hash
+    );
+
+    const bestBlock = await rpc.getBlockAsync(currentBlockIdentifier.hash, 1);
+    currentBlockTimestamp = bestBlock.result.time * 1000; // milliseconds
+
+    const genesisBlock = await rpc.getBlockHashAsync(0);
+    genesisBlockIdentifier = new Types.BlockIdentifier(
+      0, // index: 0
+      genesisBlock.result, // hash
+    );
+
+    const peersData = await rpc.getPeerInfoAsync();
+    peers = peersData.result.map(p => 
+      Types.Peer.constructFromObject({
+        peer_id: p.id,
+        metadata: {
+          addr: p.addr,
+          version: p.version,
+          subver: p.subver,
+        },
+      })
+    );
+  } catch (e) {
+    console.error(e);
+    throw Errors.UNABLE_TO_RETRIEVE_NODE_STATUS;
+  }
+
+  return new Types.NetworkStatusResponse(
+    currentBlockIdentifier,
+    currentBlockTimestamp,
+    genesisBlockIdentifier,
+    peers,
+  );
 };
 
 module.exports = {

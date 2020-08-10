@@ -30,7 +30,7 @@ const RosettaSDK = require('rosetta-node-sdk');
 * constructionMetadataRequest ConstructionMetadataRequest 
 * returns ConstructionMetadataResponse
 * */
-const constructioMetadata = (params) => {
+const constructionMetadata = async (params) => {
   const { constructionMetadataRequest } = params;
   return {};
 };
@@ -42,14 +42,14 @@ const constructioMetadata = (params) => {
 * constructionSubmitRequest ConstructionSubmitRequest 
 * returns ConstructionSubmitResponse
 * */
-const constructionSubmit = (params) => {
+const constructionSubmit = async (params) => {
   const { constructionSubmitRequest } = params;
   return {};
 };
 
 module.exports = {
   /* /construction/metadata */
-  constructioMetadata,
+  constructionMetadata,
 
   /* /construction/submit */
   constructionSubmit,

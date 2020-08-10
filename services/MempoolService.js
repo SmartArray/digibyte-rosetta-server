@@ -20,6 +20,17 @@
  */
 
 const RosettaSDK = require('rosetta-node-sdk');
+const Types = RosettaSDK.Client;
+
+const Config = require('../config');
+const OperationTypes = Config.serverConfig.operationTypes;
+const OperationStatus = Config.serverConfig.operationStatuses;
+const currency = Config.serverConfig.currency;
+
+const Constants = require('../constants');
+const rpc = require('../rpc');
+const utils = require('../utils');
+const Errors = require('../config/errors');
 
 /* Data API: Mempool */
 
@@ -30,9 +41,18 @@ const RosettaSDK = require('rosetta-node-sdk');
 * mempoolRequest MempoolRequest 
 * returns MempoolResponse
 * */
-const mempool = (params) => {
+const mempool = async (params) => {
   const { mempoolRequest } = params;
-  return {};
+
+  const mempoolResponse = await rpc.getRawMemPoolAsync(true);
+  const mempool = mempoolResponse.result;
+
+  if (!mempool) {
+    throw Errors.UNABLE_TO_FETCH_MEMPOOL_TXS;
+  }
+
+  const txIds = Object.keys(mempool);
+  return new Types.MempoolResponse(txIds);
 };
 
 /**
@@ -42,9 +62,18 @@ const mempool = (params) => {
 * mempoolTransactionRequest MempoolTransactionRequest 
 * returns MempoolTransactionResponse
 * */
-const mempoolTransaction = (params) => {
+const mempoolTransaction = async (params) => {
   const { mempoolTransactionRequest } = params;
-  return {};
+
+  const txId = mempoolTransactionRequest.transaction_identifier.hash;
+  const mempoolTransactionResponse = await rpc.getRawTransactionAsync(txId, 1);
+  const mempoolTx = mempoolTransactionResponse.result;
+
+  if (!mempool) {
+    throw Errors.UNABLE_TO_FETCH_MEMPOOL_TX;
+  }
+
+  return utils.transactionToRosettaType(mempoolTx, true);
 };
 
 module.exports = {

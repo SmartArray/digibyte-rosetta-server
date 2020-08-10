@@ -1,0 +1,31 @@
+version: "3.0"
+
+networks:
+  internal:
+
+services:
+  digibyte:
+    build:
+      context: ./digibyte-core
+      args:
+        - TESTNET=1
+        - REGTEST=0
+        - PRUNESIZE=0
+        - TX_INDEX=0
+        - ROOTDATADIR=/data2      
+    ports:
+      - "0.0.0.0:20443:18443"
+    volumes:
+      - ./data:/data2
+    entrypoint:
+      - "digibyted"
+    networks:
+      - internal
+    container_name: digibyte-node
+
+  # rosetta-server:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   networks:
+  #     - internal
