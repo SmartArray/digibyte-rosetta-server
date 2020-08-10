@@ -13,7 +13,7 @@
     "bluebird": "^3.7.2",
     "js-binary": "^1.2.0",
     "level": "^6.0.1",
-    "rosetta-node-sdk": "file:///Users/julianjager/Desktop/Projects/Digibyte/digibyte-rosetta-nodeapi"
+    "rosetta-node-sdk": "git+https://github.com/SmartArray/digibyte-rosetta-nodeapi.git"
   },
   "keywords": [
     "rosetta",
