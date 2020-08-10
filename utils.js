@@ -36,7 +36,8 @@ const txOperations = (tx, isMempoolTx = false) => {
         if (!output.scriptPubKey) return;
         if (output.scriptPubKey.type == 'nonstandard') return;
 
-        if (output.scriptPubKey.addresses.length > 1) {
+        if (!Array.isArray(output.scriptPubKey.addresses) ||
+            output.scriptPubKey.addresses.length > 1) {
           // ToDo: Handle Multisig
           return;
         }
