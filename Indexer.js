@@ -168,7 +168,7 @@ class Indexer {
       ]);
 
       await this.updateMetadata();
-      console.log('VERBOSE: Metadata saved');
+      // console.log('VERBOSE: Metadata saved');
 
       // Reset last seen
       this.lastSeenBlockHashes = {};
@@ -281,7 +281,7 @@ class Indexer {
     // Lookup in utxo cache
     let data = this.lastSeenUtxos[`${txid}:${vout}`];
     if (data != null) {
-      console.error(`Found utxo ${txid}:${vout} in utxo cache.`);
+      // console.log(`Found utxo ${txid}:${vout} in utxo cache.`);
       return {
         symbol: data.txSymbol,
         value: this.serializeUtxoValue(data.sats, data.spentInTx, data.spentOnBlock),
@@ -289,7 +289,7 @@ class Indexer {
       };
     }
 
-    console.error(`Looking into utxo db for ${txid}:${vout}...`);
+    // console.log(`Looking into utxo db for ${txid}:${vout}...`);
 
     // Lookup in db.
     // 1. Step: Get the tx symbol
@@ -443,7 +443,7 @@ class Indexer {
     }
 
     const address = output.scriptPubKey.addresses[0];
-    console.log(address, `+${output.value}`);
+    console.log('REORG REMOVAL', tx.txid);
   }
 
   async batchBlockSymbol(hash, blockSymbol) {
