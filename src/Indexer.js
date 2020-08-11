@@ -364,7 +364,7 @@ class Indexer {
       if (!txid || vout == null) {
         if (!coinbase) throw new Error(`Invalid input @ blockSymbol = ${blockSymbol}`);
         continue;
-      }y
+      }
 
       const pair = await this.utxoExists(txid, vout);
       if (pair == null) {
