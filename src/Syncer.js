@@ -1,7 +1,7 @@
 const RosettaSDK = require('rosetta-node-sdk');
 const EventEmitter = require('events');
 
-const networkIdentifier = require('./config/networkIdentifier');
+const networkIdentifier = require('../config/networkIdentifier');
 
 class Syncer extends EventEmitter {
   constructor(config, indexer) {

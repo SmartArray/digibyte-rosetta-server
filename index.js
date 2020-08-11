@@ -23,9 +23,9 @@ const RosettaSDK = require('rosetta-node-sdk');
 
 const config = require('./config');
 const networkIdentifier = require('./config/networkIdentifier');
-const ServiceHandlers = require('./services');
-const DigiByteSyncer = require('./Syncer');
-const DigiByteIndexer = require('./digibyteIndexer');
+const ServiceHandlers = require('./src/services');
+const DigiByteSyncer = require('./src/Syncer');
+const DigiByteIndexer = require('./src/digibyteIndexer');
 
 console.log(`                                                                    
  ____  _     _ _____     _          _____             _   _          _____       _     

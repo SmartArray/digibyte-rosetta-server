@@ -1,7 +1,7 @@
 const RosettaSDK = require('rosetta-node-sdk');
 const Types = RosettaSDK.Client;
 
-const Config = require('./config');
+const Config = require('../config');
 const Constants = require('./constants');
 const OperationTypes = Config.serverConfig.operationTypes;
 const OperationStatus = Config.serverConfig.operationStatuses;

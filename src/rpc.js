@@ -1,6 +1,6 @@
 const RPCClient = require('bitcoind-rpc');
 const Bluebird = require('bluebird');
-const Config = require('./config');
+const Config = require('../config');
 
 const rpcConfig = {
   protocol: Config.rpc.rpc_proto,

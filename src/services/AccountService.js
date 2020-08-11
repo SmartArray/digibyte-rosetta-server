@@ -21,7 +21,7 @@
 
 const RosettaSDK = require('rosetta-node-sdk');
 const DigiByteIndexer = require('../digibyteIndexer');
-const config = require('../config');
+const config = require('../../config');
 
 const Types = RosettaSDK.Client;
 

@@ -22,9 +22,9 @@
 const RosettaSDK = require('rosetta-node-sdk');
 const Types = RosettaSDK.Client;
 
-const Config = require('../config');
+const Config = require('../../config');
 const rpc = require('../rpc');
-const Errors = require('../config/errors');
+const Errors = require('../../config/errors');
 
 /* Data API: Network */
 

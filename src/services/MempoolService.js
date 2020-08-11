@@ -22,7 +22,7 @@
 const RosettaSDK = require('rosetta-node-sdk');
 const Types = RosettaSDK.Client;
 
-const Config = require('../config');
+const Config = require('../../config');
 const OperationTypes = Config.serverConfig.operationTypes;
 const OperationStatus = Config.serverConfig.operationStatuses;
 const currency = Config.serverConfig.currency;
@@ -30,7 +30,7 @@ const currency = Config.serverConfig.currency;
 const Constants = require('../constants');
 const rpc = require('../rpc');
 const utils = require('../utils');
-const Errors = require('../config/errors');
+const Errors = require('../../config/errors');
 
 /* Data API: Mempool */
 
