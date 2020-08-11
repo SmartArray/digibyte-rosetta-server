@@ -91,7 +91,7 @@ class Indexer {
   }
 
   async saveState() {
-    await this.worker(true);
+    await this.processBatches();
   }
 
   handleBlock(block, removed = false) {
@@ -106,7 +106,7 @@ class Indexer {
     this.worker();
   }
 
-  async worker(force = false) {
+  async worker() {
     if (!force && (this.workerActive || this.workQueue.length == 0)) return;
     this.workerActive = true;
 
@@ -158,26 +158,30 @@ class Indexer {
     }
   }
 
+  async processBatches() {
+    await Promise.all([
+      this.saveBatchedBlockSymbols(),
+      this.saveBatchedTxSymbols(),
+      this.saveBatchedUtxos(),
+      this.saveBatchedUtxoLists(),
+    ]);
+
+    await this.updateMetadata();
+    // console.log('VERBOSE: Metadata saved');
+
+    // Reset last seen
+    this.lastSeenBlockHashes = {};
+    this.lastSeenTxHashes = {};
+    this.lastSeenUtxos = {};
+  }
+
   async processBatchesIfNeeded() {
     const batchCriterion = (this.dbBatches['block-sym'].length >= BLOCK_BATCH_SIZE || 
       this.dbBatches['tx-sym'].length >= TX_BATCH_SIZE);
     const timeCriterion = false; // ToDo
 
     if (batchCriterion || timeCriterion) {
-      await Promise.all([
-        this.saveBatchedBlockSymbols(),
-        this.saveBatchedTxSymbols(),
-        this.saveBatchedUtxos(),
-        this.saveBatchedUtxoLists(),
-      ]);
-
-      await this.updateMetadata();
-      // console.log('VERBOSE: Metadata saved');
-
-      // Reset last seen
-      this.lastSeenBlockHashes = {};
-      this.lastSeenTxHashes = {};
-      this.lastSeenUtxos = {};
+      await this.processBatches();
     }
   }
 
@@ -285,7 +289,7 @@ class Indexer {
   async utxoExistsBySymbol(txSymbol, vout) {
     // 1. Step: Check args 
     if (txSymbol == null) {
-      console.error(`Could not find tx symbol for ${txSymbol}`);
+      console.error(`Null passed to utxoExistsBySymbol`);
       return null;
     }
 
@@ -360,7 +364,7 @@ class Indexer {
       if (!txid || vout == null) {
         if (!coinbase) throw new Error(`Invalid input @ blockSymbol = ${blockSymbol}`);
         continue;
-      }
+      }y
 
       const pair = await this.utxoExists(txid, vout);
       if (pair == null) {
