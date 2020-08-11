@@ -285,7 +285,7 @@ class Indexer {
   async utxoExistsBySymbol(txSymbol, vout) {
     // 1. Step: Check args 
     if (txSymbol == null) {
-      console.error(`Could not find tx symbol for ${txid}`);
+      console.error(`Could not find tx symbol for ${txSymbol}`);
       return null;
     }
 
