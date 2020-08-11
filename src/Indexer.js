@@ -107,7 +107,7 @@ class Indexer {
   }
 
   async worker() {
-    if (!force && (this.workerActive || this.workQueue.length == 0)) return;
+    if (this.workerActive || this.workQueue.length == 0) return;
     this.workerActive = true;
 
     try {
