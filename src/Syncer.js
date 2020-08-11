@@ -19,10 +19,11 @@ class Syncer extends EventEmitter {
     this.fetcher = fetcher;
     this.syncer = null;
     this.syncPaused = false;
+    this.isSynced = false;
   }
 
   async initSyncer() {
-    console.log('Initializing Syncer...');
+    // console.log('Initializing Syncer...');
 
     /* Create a fetcher */
     const fetcher = this.fetcher;
@@ -48,12 +49,20 @@ class Syncer extends EventEmitter {
     this.syncPaused = false;
     this.syncer = syncer;
 
-    console.log('Successfully initialized syncer!');
+    // console.log('Successfully initialized syncer!');
     return syncer;
   }
   
   sync(start, end) {
     return this.syncer.sync(start, end);
+  }
+
+  setIsSynced() {
+    if (!this.isSynced) {
+      console.log('Blockchain synced!');
+    }
+    
+    this.isSynced = true;
   }
 
   blockAdded(block) {

@@ -26,6 +26,7 @@ const networkIdentifier = require('./config/networkIdentifier');
 const ServiceHandlers = require('./src/services');
 const DigiByteSyncer = require('./src/Syncer');
 const DigiByteIndexer = require('./src/digibyteIndexer');
+const rpc = require('./src/rpc');
 
 console.log(`                                                                    
  ____  _     _ _____     _          _____             _   _          _____       _     
@@ -80,10 +81,38 @@ Server.register('/construction/submit', ServiceHandlers.Construction.constructio
 /* Initialize Syncer */
 const Syncer = new DigiByteSyncer(config.syncer, DigiByteIndexer);
 
+const startSyncer = async () => {
+  console.log(`Internal utxo sync state: block height = ${DigiByteIndexer.lastBlockSymbol}`);
+  await Syncer.initSyncer();
+
+  continueSyncIfNeeded();
+  return true;
+};
+
+const continueSyncIfNeeded = async () => {
+  const currentHeight = DigiByteIndexer.lastBlockSymbol;
+  const blockCountResponse = await rpc.getBlockCountAsync();
+  const blockCount = blockCountResponse.result;
+
+  if (currentHeight >= blockCount) {
+    Syncer.setIsSynced();
+    return setTimeout(continueSyncIfNeeded, 10000);
+  }
+
+  const nextHeight = currentHeight + 1;
+
+  // Sync the next blocks
+  const syncCount = Math.min(blockCount - nextHeight, 1000);
+  console.log(`Syncing blocks from ${nextHeight}-${nextHeight + syncCount}...`);
+  await Syncer.sync(nextHeight, nextHeight + syncCount);
+
+  setImmediate(() => {
+    continueSyncIfNeeded();
+  });
+};
+
 DigiByteIndexer.initIndexer()
-  .then(() => console.log(`Starting sync from block height ${DigiByteIndexer.lastBlockSymbol}`))
-  .then(() => Syncer.initSyncer())
-  .then(() => Syncer.sync(DigiByteIndexer.lastBlockSymbol, 1000000))
+  .then(startSyncer)
   .catch((e) => {
     console.error(`Could not start sync: ${e.message}`);
     console.error(e);

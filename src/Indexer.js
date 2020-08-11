@@ -44,9 +44,8 @@ const returnSymbol = (symbol) => {
 const hexToBin = (hexString) => {
   return hexString;
 
-  // ToDo: 
-
   if (typeof hexString !== 'string' || hexString.length == 0) {
+    throw new Error('No valid string');
   }
   
   return Buffer.from(hexString, 'hex');
@@ -143,8 +142,8 @@ class Indexer {
         this.bestBlockHash = block.hash;
         await this.saveBlock(block);
 
-        if (block.height % 100 == 0 && block.height != 0)
-          console.log(`Synched blocks ${block.height - 100}-${block.height}`);
+        // if (block.height % 100 == 0 && block.height != 0)
+        //   console.log(`Synched blocks ${block.height - 100}-${block.height}`);
       }
     } catch (e) {
       console.error('worker', e);
@@ -537,7 +536,10 @@ class Indexer {
         balance += decodedUtxo.sats;
       }
 
-      return balance;
+      return {
+        balance,
+        blockSymbol,
+      };
     } catch (e) {
       console.error(e);
       return null;

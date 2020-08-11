@@ -1,6 +1,11 @@
 const RosettaSDK = require('rosetta-node-sdk');
 const Types = RosettaSDK.Client;
 
+Types.Error.prototype.addDetails = function addDetails(data) {
+  this.details = Object.assign(this.details || {}, data);
+  return this;
+};
+
 const errors = {
   UNABLE_TO_RETRIEVE_NODE_STATUS: new Types.Error(1, 'Network Status could not be retrieved', true),
   UNABLE_TO_FETCH_BLOCK: new Types.Error(2, 'Could not fetch block', true),
