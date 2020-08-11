@@ -30,7 +30,7 @@ class Syncer extends EventEmitter {
 
     /* Define some options for the syncer */
     const genesisBlock = networkStatus.genesis_block_identifier;
-    const maxSync = 10;
+    const maxSync = 200;
 
     /* Create the syncer */
     const syncer = new RosettaSDK.Syncer({

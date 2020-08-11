@@ -4,12 +4,13 @@ const JSBinType = require('js-binary').Type;
 
 const syncBlockCache = require('./syncBlockCache');
 
-const BLOCK_BATCH_SIZE = 30;
-const TX_BATCH_SIZE = 2000;
+const BLOCK_BATCH_SIZE = 200;
+const TX_BATCH_SIZE = 20000;
 const SATOSHI = 100000000;
 
 const utxoValueSchema = new JSBinType({
   'sats': 'uint',
+  'createdOnBlock': 'uint',
   'spentOnBlock?': 'uint',
   'spentInTx?': 'uint',
 });
@@ -26,7 +27,7 @@ const addressValueSchema = new JSBinType({
 
 const EMPTY_UTXO_LIST = addressValueSchema.encode({
   txSymbol: [],
-  vout: []
+  vout: [],
 });
 
 const convertToSatoshis = (value) => {
@@ -256,7 +257,7 @@ class Indexer {
       });
 
       await this.batchTransactionInputs(tx, this.lastTxSymbol, blockSymbol);
-      await this.batchTransactionOutputs(tx, this.lastTxSymbol);
+      await this.batchTransactionOutputs(tx, this.lastTxSymbol, blockSymbol);
     }
   }
 
@@ -267,9 +268,10 @@ class Indexer {
     });
   }
 
-  serializeUtxoValue(sats, spentInTx, spentOnBlock) {
+  serializeUtxoValue(sats, createdOnBlock, spentInTx, spentOnBlock) {
     const encoded = utxoValueSchema.encode({
       sats,
+      createdOnBlock,
       spentOnBlock,
       spentInTx,
     });
@@ -277,23 +279,8 @@ class Indexer {
     return encoded;
   }
 
-  async utxoExists(txid, vout) {
-    // Lookup in utxo cache
-    let data = this.lastSeenUtxos[`${txid}:${vout}`];
-    if (data != null) {
-      // console.log(`Found utxo ${txid}:${vout} in utxo cache.`);
-      return {
-        symbol: data.txSymbol,
-        value: this.serializeUtxoValue(data.sats, data.spentInTx, data.spentOnBlock),
-        key: this.serializeUtxoKey(data.txSymbol, data.n),
-      };
-    }
-
-    // console.log(`Looking into utxo db for ${txid}:${vout}...`);
-
-    // Lookup in db.
-    // 1. Step: Get the tx symbol
-    const txSymbol = await this.getTxSymbol(txid);
+  async utxoExistsBySymbol(txSymbol, vout) {
+    // 1. Step: Check args 
     if (txSymbol == null) {
       console.error(`Could not find tx symbol for ${txid}`);
       return null;
@@ -319,12 +306,29 @@ class Indexer {
     };
   }
 
-  async invalidateUtxo(txid, vout, sats, spentInTx, spentOnBlock, serializedKey = null) {
+  async utxoExists(txid, vout) {
+    // Lookup in utxo cache
+    let data = this.lastSeenUtxos[`${txid}:${vout}`];
+    if (data != null) {
+      // console.log(`Found utxo ${txid}:${vout} in utxo cache.`);
+      return {
+        symbol: data.txSymbol,
+        value: this.serializeUtxoValue(data.sats, data.block, data.spentInTx, data.spentOnBlock),
+        key: this.serializeUtxoKey(data.txSymbol, data.n),
+      };
+    }
+
+    // console.log(`Looking into utxo db for ${txid}:${vout}...`);
+    const txSymbol = await this.getTxSymbol(txid);
+    return await this.utxoExistsBySymbol(txSymbol, vout);
+  }
+
+  async invalidateUtxo(txid, vout, sats, blockSymbol, spentInTx, spentOnBlock, serializedKey = null) {
     const ops = this.dbBatches['utxo'];
 
     // Step 1: Get binary encoding and retrieve the updated utxo value
     const key = serializedKey || this.serializeUtxoKey(spentInTx, vout);
-    const value = this.serializeUtxoValue(sats, spentInTx, spentOnBlock);
+    const value = this.serializeUtxoValue(sats, blockSymbol, spentInTx, spentOnBlock);
 
     // Step 2: Add the updated utxo to the batch queue
     ops.push({
@@ -338,6 +342,7 @@ class Indexer {
       txSymbol: spentInTx,
       txid: txid,
       n: vout,
+      block: blockSymbol,
       sats,
       spentInTx,
       spentOnBlock,
@@ -362,11 +367,11 @@ class Indexer {
       // 2. Step: Invalidate utxo.
       // This will set the keys `spentOnBlock`, `spentInTx` symbols of the current utxo.
       const decoded = utxoValueSchema.decode(pair.value);
-      await this.invalidateUtxo(txid, vout, decoded.sats, txSymbol, blockSymbol, pair.key);
+      await this.invalidateUtxo(txid, vout, decoded.sats, blockSymbol, txSymbol, blockSymbol, pair.key);
     }
   }
 
-  async batchTransactionOutputs(tx, txSymbol) {
+  async batchTransactionOutputs(tx, txSymbol, blockSymbol) {
     const ops = this.dbBatches['utxo'];
 
     // Get binary encodings
@@ -375,7 +380,7 @@ class Indexer {
 
       return {
         key: this.serializeUtxoKey(txSymbol, out.n),
-        value: this.serializeUtxoValue(sats),
+        value: this.serializeUtxoValue(sats, blockSymbol),
 
         // Store original data
         txid: tx.txid,
@@ -396,6 +401,7 @@ class Indexer {
       this.lastSeenUtxos[`${pair.txid}:${pair.n}`] = {
         txSymbol,
         txid: pair.txid,
+        block: blockSymbol,
         n: pair.n,
         sats: pair.sats,
       };
@@ -476,6 +482,66 @@ class Indexer {
       .catch(e => null);
 
     return returnSymbol(symbol);
+  }
+
+  async getAccountBalance(address, atBlock = null) {
+    try {
+      let blockSymbol;
+
+      if (typeof atBlock == 'number') {
+        blockSymbol = atBlock;
+
+        if (blockSymbol < this.lastBlockSymbol) {
+          throw new Error(
+            `Block height ${atBlock} is not available.`
+            + ` Node to ${this.this.lastBlockSymbol}.`
+          );
+        }
+
+      } else if (typeof atBlock == 'string') {
+        // lookup
+        blockSymbol = this.getBlockSymbol(atBlock);
+
+        if (blockSymbol == null)
+          throw new Error(`No block found for hash ${atBlock}`);
+      }
+
+      // If no block was specified, use the most recent one
+      if (!blockSymbol) blockSymbol = this.lastBlockSymbol;
+
+      const utxos = await this.db['address-utxos'].get(serializeAddress(address));
+      const utxoList = addressValueSchema.decode(utxos);
+      let balance = 0;
+
+      for (let i = 0; i < utxoList.txSymbol.length; ++i) {
+        const symbol = utxoList.txSymbol[i];
+        const vout = utxoList.vout[i];
+
+        const utxo = await this.utxoExistsBySymbol(symbol, vout);
+        if (!utxo) {
+          throw new Error(`Could not find utxo ${symbol}:${vout}`);
+        }
+
+        const decodedUtxo = utxoValueSchema.decode(utxo.value);
+
+        // Skip if utxo does not exist at specified block
+        if (decodedUtxo.createdOnBlock > blockSymbol) {
+          continue;
+        }
+
+        // Skip if spent before specified block
+        if (decodedUtxo.spentOnBlock != null && decodedUtxo.spentOnBlock > blockSymbol) {
+          continue;
+        }
+
+        balance += decodedUtxo.sats;
+      }
+
+      return balance;
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
   }
 
   async initBestBlockHash() {

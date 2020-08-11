@@ -25,7 +25,7 @@ const config = require('./config');
 const networkIdentifier = require('./config/networkIdentifier');
 const ServiceHandlers = require('./services');
 const DigiByteSyncer = require('./Syncer');
-const DigiByteIndexer = require('./Indexer');
+const DigiByteIndexer = require('./digibyteIndexer');
 
 console.log(`                                                                    
  ____  _     _ _____     _          _____             _   _          _____       _     
@@ -77,14 +77,13 @@ Server.register('/mempool/transaction', ServiceHandlers.Mempool.mempoolTransacti
 Server.register('/construction/metadata', ServiceHandlers.Construction.constructioMetadata);
 Server.register('/construction/submit', ServiceHandlers.Construction.constructionSubmit);
 
-/* Initialize Syncer and Indexer */
-const Indexer = new DigiByteIndexer(config.data);
-const Syncer = new DigiByteSyncer(config.syncer, Indexer);
+/* Initialize Syncer */
+const Syncer = new DigiByteSyncer(config.syncer, DigiByteIndexer);
 
-Indexer.initIndexer()
-  .then(() => console.log(`Starting sync from block height ${Indexer.lastBlockSymbol}`))
+DigiByteIndexer.initIndexer()
+  .then(() => console.log(`Starting sync from block height ${DigiByteIndexer.lastBlockSymbol}`))
   .then(() => Syncer.initSyncer())
-  .then(() => Syncer.sync(Indexer.lastBlockSymbol, 1000000))
+  .then(() => Syncer.sync(DigiByteIndexer.lastBlockSymbol, 1000000))
   .catch((e) => {
     console.error(`Could not start sync: ${e.message}`);
     console.error(e);
