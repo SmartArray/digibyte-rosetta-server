@@ -20,6 +20,10 @@
  */
 
 const RosettaSDK = require('rosetta-node-sdk');
+const DigiByteIndexer = require('../digibyteIndexer');
+const config = require('../config');
+
+const Types = RosettaSDK.Client;
 
 /* Data API: Account */
 
@@ -32,7 +36,38 @@ const RosettaSDK = require('rosetta-node-sdk');
 * */
 const balance = async (params) => {
   const { accountBalanceRequest } = params;
-  return {};
+
+  const address = accountBalanceRequest.account_identifier.address;
+  let atBlock;
+
+  if (accountBalanceRequest.block_identifier) {
+    atBlock = accountBalanceRequest.block_identifier.index || accountBalanceRequest.block_identifier.hash;
+  }
+
+  try {
+    const balance = DigiByteIndexer.getAccountBalance(address, atBlock);
+
+    const blockIdentifier = new Types.BlockIdentifier(
+      DigiByteIndexer.lastBlockSymbol,
+      DigiByteIndexer.bestBlockHash,
+    );
+
+    const balances = [
+      new Types.Amount(
+        balance.toFixed(0),
+        config.serverConfig.currency,
+      ),
+    ];
+
+    return new Types.AccountBalanceResponse(
+      blockIdentifier,
+      balances,
+    );
+
+  } catch(e) {
+    const error = new Types.Error();
+    return error;
+  }
 };
 
 module.exports = {
