@@ -90,6 +90,10 @@ class Indexer {
     this.dbBatches[key] = []; 
   }
 
+  async saveState() {
+    await this.worker(true);
+  }
+
   handleBlock(block, removed = false) {
     const blockHash = block.block_identifier.hash;
     const blockData = syncBlockCache.get(blockHash);
@@ -102,8 +106,8 @@ class Indexer {
     this.worker();
   }
 
-  async worker() {
-    if (this.workerActive || this.workQueue.length == 0) return;
+  async worker(force = false) {
+    if (!force && (this.workerActive || this.workQueue.length == 0)) return;
     this.workerActive = true;
 
     try {

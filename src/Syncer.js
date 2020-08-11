@@ -61,7 +61,7 @@ class Syncer extends EventEmitter {
     if (!this.isSynced) {
       console.log('Blockchain synced!');
     }
-    
+
     this.isSynced = true;
   }
 

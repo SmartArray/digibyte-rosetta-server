@@ -105,6 +105,7 @@ const continueSyncIfNeeded = async () => {
   const syncCount = Math.min(blockCount - nextHeight, 1000);
   console.log(`Syncing blocks from ${nextHeight}-${nextHeight + syncCount}...`);
   await Syncer.sync(nextHeight, nextHeight + syncCount);
+  await Indexer.saveState();
 
   setImmediate(() => {
     continueSyncIfNeeded();
