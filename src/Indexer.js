@@ -80,6 +80,7 @@ class Indexer {
     this.lastSeenBlockHashes = {};
     this.lastSeenTxHashes = {};
     this.lastSeenUtxos = {};
+    this.lastAddressUtxos = {};
 
 		this.events = new EventEmitter();
   }
@@ -197,6 +198,7 @@ class Indexer {
     this.lastSeenBlockHashes = {};
     this.lastSeenTxHashes = {};
     this.lastSeenUtxos = {};
+    this.lastAddressUtxos = {};
   }
 
   async processBatchesIfNeeded() {
@@ -221,10 +223,35 @@ class Indexer {
   }
 
   async saveBatchedUtxoLists() {
-    const ops = this.dbBatches['address-utxos'];
-    await this.db['address-utxos'].batch(ops);
+    const ops = [];
 
-    ops.length = 0;
+    for (let address of Object.keys(this.lastAddressUtxos)) {
+      // Get the recent address utxos
+      const utxoList = this.lastAddressUtxos[address];
+
+      // Serialize the address and get the existing address utxos
+      const serializedAddress = serializeAddress(address);
+      const serializedUtxoList = await this.db['address-utxos'].get(serializedAddress)
+        .catch(e => EMPTY_UTXO_LIST);
+
+      // Decode the existing structure
+      const deserializedUtxoList = addressValueSchema.decode(serializedUtxoList);
+
+      // Concatenate existing utxos with new utxos
+      deserializedUtxoList.txSymbol = deserializedUtxoList.txSymbol.concat(utxoList.txSymbol);
+      deserializedUtxoList.vout = deserializedUtxoList.vout.concat(utxoList.vout);
+
+      // Add to batch
+      ops.push({
+        type: 'put',
+        key: serializedAddress,
+        value: addressValueSchema.encode(deserializedUtxoList),
+      });      
+    }
+
+    if (ops.length > 0) {
+      await this.db['address-utxos'].batch(ops);
+    }
   }
 
   async saveBatchedUtxos() {
@@ -275,7 +302,9 @@ class Indexer {
     for (let tx of transactions) {
       // Skip if already exists.
       const txSymbol = await this.getTxSymbol(tx.txid);
-      if (txSymbol != null) continue;
+      if (txSymbol != null) {
+        console.error(`Skipping because tx ${tx.txid} already processed`);
+      }
 
       // Get next tx symbol
       this.lastTxSymbol = this.lastTxSymbol + 1;
@@ -369,7 +398,11 @@ class Indexer {
     });
 
     // Step 3: Add to last seen
-    this.lastSeenUtxos[`${txid}:${vout}`] = {
+    const identifier = `${txid}:${vout}`;
+    const existing = this.lastSeenUtxos[identifier] || {};
+
+    // Patch
+    Object.assign(existing, {
       txSymbol: spentInTx,
       txid: txid,
       n: vout,
@@ -377,7 +410,9 @@ class Indexer {
       sats,
       spentInTx,
       spentOnBlock,
-    };
+    });
+
+    this.lastSeenUtxos[identifier] = existing;
   }
 
   async batchTransactionInputs(tx, txSymbol, blockSymbol) {
@@ -429,7 +464,12 @@ class Indexer {
         value: pair.value,
       });
 
-      this.lastSeenUtxos[`${pair.txid}:${pair.n}`] = {
+      const identifier = `${pair.txid}:${pair.n}`;
+      if (this.lastSeenUtxos[identifier]) {
+        throw new Error('UTXO should only exist once');
+      }
+
+      this.lastSeenUtxos[identifier] = {
         txSymbol,
         txid: pair.txid,
         block: blockSymbol,
@@ -450,25 +490,16 @@ class Indexer {
     }
 
     const address = output.scriptPubKey.addresses[0];
-    // console.log(address, `+${output.value}`);
-
-    const ops = this.dbBatches['address-utxos'];
-
-    const serializedAddress = serializeAddress(address);
-    const serializedUtxoList = await this.db['address-utxos'].get(serializedAddress)
-      .catch(e => EMPTY_UTXO_LIST);
-
-    const deserializedUtxoList = addressValueSchema.decode(serializedUtxoList);
+    const utxoList = this.lastAddressUtxos[address] || {
+      txSymbol: [],
+      vout: [],
+    };
 
     // Add the utxo to the list
-    deserializedUtxoList.txSymbol.push(txSymbol);
-    deserializedUtxoList.vout.push(output.n);
+    utxoList.txSymbol.push(txSymbol);
+    utxoList.vout.push(output.n);
 
-    ops.push({
-      type: 'put',
-      key: serializeAddress,
-      value: addressValueSchema.encode(deserializedUtxoList),
-    });
+    this.lastAddressUtxos[address] = utxoList;
   }
 
   async batchUtxoRemovalFromAddress(tx, txSymbol, output) {
@@ -519,6 +550,7 @@ class Indexer {
   async getAccountBalance(address, atBlock = null) {
     try {
       let blockSymbol;
+      let blockHash;
 
       if (typeof atBlock == 'number') {
         blockSymbol = atBlock;
@@ -539,7 +571,10 @@ class Indexer {
       }
 
       // If no block was specified, use the most recent one
-      if (!blockSymbol) blockSymbol = this.lastBlockSymbol;
+      if (!blockSymbol) {
+        blockSymbol = this.lastBlockSymbol;
+        blockHash = this.bestBlockHash;
+      }
 
       const utxos = await this.db['address-utxos'].get(serializeAddress(address));
       const utxoList = addressValueSchema.decode(utxos);
@@ -562,7 +597,7 @@ class Indexer {
         }
 
         // Skip if spent before specified block
-        if (decodedUtxo.spentOnBlock != null && decodedUtxo.spentOnBlock > blockSymbol) {
+        if (decodedUtxo.spentOnBlock != null && blockSymbol > decodedUtxo.spentOnBlock) {
           continue;
         }
 
@@ -572,6 +607,7 @@ class Indexer {
       return {
         balance,
         blockSymbol,
+        blockHash,
       };
     } catch (e) {
       console.error(e);
@@ -634,7 +670,7 @@ class Indexer {
     this.createDatabase('address-sym');
 
     this.createDatabase('utxo', true, true);
-    this.createDatabase('address-utxos');
+    this.createDatabase('address-utxos', false, true);
     this.createDatabase('block-height');
 
     await this.initBestBlockHash();
@@ -642,12 +678,12 @@ class Indexer {
     await this.initBlockSymbol();
     await this.initTxSymbol();
 
-    console.log({
-      lastBlockSymbol: this.lastBlockSymbol,
-      lastTxSymbol: this.lastTxSymbol,
-      genesisBlockHash: this.genesisBlockHash,
-      bestBlockHash: this.bestBlockHash,
-    });
+    // console.log({
+    //   lastBlockSymbol: this.lastBlockSymbol,
+    //   lastTxSymbol: this.lastTxSymbol,
+    //   genesisBlockHash: this.genesisBlockHash,
+    //   bestBlockHash: this.bestBlockHash,
+    // });
   }
 }
 

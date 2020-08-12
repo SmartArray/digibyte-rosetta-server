@@ -20,8 +20,9 @@
  */
 
 const RosettaSDK = require('rosetta-node-sdk');
-const DigiByteIndexer = require('../digibyteIndexer');
+const Errors = require('../../config/errors');
 const config = require('../../config');
+const DigiByteIndexer = require('../digibyteIndexer');
 const rpc = require('../rpc');
 
 const Types = RosettaSDK.Client;
@@ -37,30 +38,44 @@ const Types = RosettaSDK.Client;
 const balance = async (params) => {
   const { accountBalanceRequest } = params;
 
+  // Get the requested address
   const address = accountBalanceRequest.account_identifier.address;
-  let atBlock;
+
+  // Either block index or block hash
+  let atBlock = null;
+
+  // Prepare the block identifier for the response
+  const blockIdentifier = new Types.BlockIdentifier();
 
   if (accountBalanceRequest.block_identifier) {
-    atBlock = accountBalanceRequest.block_identifier.index || accountBalanceRequest.block_identifier.hash;
+    if (accountBalanceRequest.block_identifier.hash) {
+      atBlock = accountBalanceRequest.block_identifier.hash;
+      blockIdentifier.hash = accountBalanceRequest.block_identifier.hash;
+    }
+
+    // Prefer block index to block hash
+    if (accountBalanceRequest.block_identifier.index) {
+      atBlock = accountBalanceRequest.block_identifier.index;
+      blockIdentifier.index = accountBalanceRequest.block_identifier.index;
+    }
   }
 
   try {
-    const accountData = DigiByteIndexer.getAccountBalance(address, atBlock);
+    // Get the Account Balance from the UTXO Indexer
+    const accountData = await DigiByteIndexer.getAccountBalance(address, atBlock);
     const balance = accountData.balance;
-    const blockIdentifier = new Types.BlockIdentifier();
 
-    if (atBlock) {
-      blockIdentifier.index = lastBlockSymbol;
-      blockIdentifier.hash = bestBlockHash;
-    } else {
-      blockIdentifier.index = accountBalanceRequest.block_identifier.index || accountData.blockSymbol;
-      blockIdentifier.hash = accountBalanceRequest.block_identifier.hash;
+    // BlockSymbol
+    blockIdentifier.index = accountData.blockSymbol;
+    if (accountData.blockHash) blockIdentifier.hash = accountData.blockHash;
 
-      if (!blockIdentifier.hash) {
-        blockIdentifier.hash = await rpc.getBlockHashAsync(blockRequest.block_identifier.index);
-      }
+    // If the hash was not yet set, get the block hash using rpc.
+    if (!blockIdentifier.hash) {
+      console.log('Retrieving the block hash for symbol', accountData)
+      blockIdentifier.hash = await rpc.getBlockHashAsync(accountData.blockSymbol);
     }
 
+    // Create the balances array
     const balances = [
       new Types.Amount(
         balance.toFixed(0),
@@ -68,14 +83,16 @@ const balance = async (params) => {
       ),
     ];
 
+    // Return the account balance
     return new Types.AccountBalanceResponse(
       blockIdentifier,
       balances,
     );
 
   } catch(e) {
-    const error = new Types.Error();
-    return error;
+    return Errors.UNABLE_TO_RETRIEVE_BALANCE.addDetails({
+      message: e.message,
+    });
   }
 };
 

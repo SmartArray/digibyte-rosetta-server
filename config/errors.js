@@ -13,6 +13,7 @@ const errors = {
   UNABLE_TO_FETCH_MEMPOOL_TXS: new Types.Error(4, 'Could not fetch mempool transactions', true),
   UNABLE_TO_FETCH_MEMPOOL_TX: new Types.Error(5, 'Could not fetch mempool transaction', true),
   NODE_SYNCING: new Types.Error(6, 'The underlying node is still syncing', true),
+  UNABLE_TO_RETRIEVE_BALANCE: new Types.Error(7, 'The account balance could not be retrieved', true),
 };
 
 module.exports = errors;

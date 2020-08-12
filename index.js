@@ -80,7 +80,7 @@ Server.register('/construction/submit', ServiceHandlers.Construction.constructio
 
 /* Initialize Syncer */
 const startSyncer = async () => {
-  console.log(`Internal utxo sync state: block height = ${DigiByteIndexer.lastBlockSymbol}`);
+  console.log(`Starting sync from height ${DigiByteIndexer.lastBlockSymbol}...`);
   await DigiByteSyncer.initSyncer();
 
   continueSyncIfNeeded();
@@ -93,6 +93,8 @@ const continueSyncIfNeeded = async () => {
   const blockCount = blockCountResponse.result;
 
   if (currentHeight >= blockCount) {
+    // If the sync block height equals the best block height,
+    // set the syncer as synced.
     DigiByteSyncer.setIsSynced();
     return setTimeout(continueSyncIfNeeded, 10000);
   }
@@ -101,12 +103,16 @@ const continueSyncIfNeeded = async () => {
 
   // Sync the next blocks
   const syncCount = Math.min(blockCount - nextHeight, 1000);
-  console.log(`Syncing blocks from ${nextHeight}-${nextHeight + syncCount}...`);
-  await DigiByteSyncer.sync(nextHeight, nextHeight + syncCount);
+  const targetHeight = nextHeight + syncCount;
+
+  await DigiByteSyncer.sync(nextHeight, targetHeight);
   await DigiByteIndexer.saveState();
 
   setImmediate(() => {
-    continueSyncIfNeeded();
+    // Continue to sync, but using the event queue.
+    // That way, the promise chain gets interrupted
+    // and memory leaks are prevented.
+    continueSyncIfNeeded(); // loop
   });
 };
 

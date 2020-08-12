@@ -48,6 +48,7 @@ module.exports = {
     errors.UNABLE_TO_FETCH_MEMPOOL_TXS,
     errors.UNABLE_TO_FETCH_MEMPOOL_TX,
     errors.NODE_SYNCING,
+    errors.UNABLE_TO_RETRIEVE_BALANCE,
   ],
 
   operationTypes: {
