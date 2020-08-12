@@ -16,16 +16,19 @@ DigiByte Rosetta Node offering a unified API according to the standard proposed 
 1. Install docker and git for your system
 
 ## Docker Build Steps
-1. Clone the container using git ```bash
+1. Clone the container using git
+```bash
 > git clone https://github.com/SmartArray/digibyte-rosetta-server.git
 ```
-2. Build the docker container ```bash
+2. Build the docker container
+```bash
 # Build the docker container for testnet (may take a while).
 # Other build args are documented in ./Dockerfile
 > cd digibyte-rosetta-server
 > docker build -t digibyte/rosetta:latest --build-arg use_testnet=1 .
 ```
-3. Start the docker container ```bash
+3. Start the docker container
+```bash
 # This command will start the docker container.
 # In this example, docker will forward two ports: 8080, and 12026.
 # Port 8080/tcp is the port of the rosetta api server.
