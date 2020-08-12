@@ -137,7 +137,7 @@ class Indexer {
           // Check if the previous block was already processed
           const previousBlockHash = block.previousblockhash;
           const previousBlockExists = await this.getBlockSymbol(previousBlockHash);
-          if (previousBlockExists == null && !block.height == 0) {
+          if (previousBlockExists == null && block.height != 0) {
             throw new Error(`Previous block ${previousBlockHash} does not exist`);
           }
         }
