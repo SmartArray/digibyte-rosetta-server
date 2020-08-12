@@ -18,14 +18,14 @@ DigiByte Rosetta Node offering a unified API according to the standard proposed 
 ## Docker Build Steps
 1. Clone the container using git
 ```bash
-> git clone https://github.com/SmartArray/digibyte-rosetta-server.git
+git clone https://github.com/SmartArray/digibyte-rosetta-server.git
 ```
 2. Build the docker container
 ```bash
 # Build the docker container for testnet (may take a while).
 # Other build args are documented in ./Dockerfile
-> cd digibyte-rosetta-server
-> docker build -t digibyte/rosetta:latest --build-arg use_testnet=1 .
+cd digibyte-rosetta-server
+docker build -t digibyte/rosetta:latest --build-arg use_testnet=1 .
 ```
 3. Start the docker container
 ```bash
@@ -34,7 +34,7 @@ DigiByte Rosetta Node offering a unified API according to the standard proposed 
 # Port 8080/tcp is the port of the rosetta api server.
 # Port 12026/tcp is the p2p testnet port.
 # If you are using mainnet, make sure you replace the port 12026 with 12024.
-> docker run -p 12026:12026 -p 8080:8080 digibyte/rosetta:latest
+docker run -p 12026:12026 -p 8080:8080 digibyte/rosetta:latest
 ```
 
 ## Test
