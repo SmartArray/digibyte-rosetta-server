@@ -80,7 +80,7 @@ Server.register('/construction/submit', ServiceHandlers.Construction.constructio
 
 /* Initialize Syncer */
 const startSyncer = async () => {
-  console.log(`Starting sync from height ${DigiByteIndexer.lastBlockSymbol}...`);
+  console.log(`Starting sync from height ${DigiByteIndexer.lastBlockSymbol+1}...`);
   await DigiByteSyncer.initSyncer();
 
   continueSyncIfNeeded();
