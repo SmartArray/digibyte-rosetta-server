@@ -28,6 +28,7 @@ const utils = require('../utils');
 const Errors = require('../../config/errors');
 
 const SyncBlockCache = require('../syncBlockCache');
+const DigiByteSyncer = require('../digibyteSyncer');
 
 /* Data API: Block */
 
@@ -80,13 +81,15 @@ const block = async (params) => {
     );
   }
 
+  const transactions = DigiByteSyncer.isSynched ? 
+    blockData.tx.map(tx => utils.transactionToRosettaType(tx)) :
+    [];
+
   const block = Types.Block.constructFromObject({
     block_identifier: queriedBlock,
     parent_block_identifier: parentBlock,
     timestamp: blockData.time * 1000,
-    transactions: blockData.tx.map(tx => 
-      utils.transactionToRosettaType(tx)
-    ),
+    transactions: transactions,
     metadata: utils.blockMetadata(blockData),
   });
 

@@ -24,7 +24,7 @@ const RosettaSDK = require('rosetta-node-sdk');
 const config = require('./config');
 const networkIdentifier = require('./config/networkIdentifier');
 const ServiceHandlers = require('./src/services');
-const DigiByteSyncer = require('./src/Syncer');
+const DigiByteSyncer = require('./src/digibyteSyncer');
 const DigiByteIndexer = require('./src/digibyteIndexer');
 const rpc = require('./src/rpc');
 
@@ -79,11 +79,9 @@ Server.register('/construction/metadata', ServiceHandlers.Construction.construct
 Server.register('/construction/submit', ServiceHandlers.Construction.constructionSubmit);
 
 /* Initialize Syncer */
-const Syncer = new DigiByteSyncer(config.syncer, DigiByteIndexer);
-
 const startSyncer = async () => {
   console.log(`Internal utxo sync state: block height = ${DigiByteIndexer.lastBlockSymbol}`);
-  await Syncer.initSyncer();
+  await DigiByteSyncer.initSyncer();
 
   continueSyncIfNeeded();
   return true;
@@ -95,16 +93,16 @@ const continueSyncIfNeeded = async () => {
   const blockCount = blockCountResponse.result;
 
   if (currentHeight >= blockCount) {
-    Syncer.setIsSynced();
+    DigiByteSyncer.setIsSynced();
     return setTimeout(continueSyncIfNeeded, 10000);
   }
 
   const nextHeight = currentHeight + 1;
 
   // Sync the next blocks
-  const syncCount = Math.min(blockCount - nextHeight, 10000);
+  const syncCount = Math.min(blockCount - nextHeight, 1000);
   console.log(`Syncing blocks from ${nextHeight}-${nextHeight + syncCount}...`);
-  await Syncer.sync(nextHeight, nextHeight + syncCount);
+  await DigiByteSyncer.sync(nextHeight, nextHeight + syncCount);
   await DigiByteIndexer.saveState();
 
   setImmediate(() => {

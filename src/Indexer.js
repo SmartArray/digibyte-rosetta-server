@@ -1,4 +1,5 @@
 
+const EventEmitter = require('events');
 const level = require('level');
 const JSBinType = require('js-binary').Type;
 
@@ -7,6 +8,8 @@ const syncBlockCache = require('./syncBlockCache');
 const BLOCK_BATCH_SIZE = 200;
 const TX_BATCH_SIZE = 20000;
 const SATOSHI = 100000000;
+
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 const utxoValueSchema = new JSBinType({
   'sats': 'uint',
@@ -42,13 +45,12 @@ const returnSymbol = (symbol) => {
 };
 
 const hexToBin = (hexString) => {
-  return hexString;
-
   if (typeof hexString !== 'string' || hexString.length == 0) {
     throw new Error('No valid string');
   }
   
-  return Buffer.from(hexString, 'hex');
+  const ret = Buffer.from(hexString, 'hex');
+  return ret;
 }
 
 const serializeAddress = (address) => {
@@ -78,23 +80,44 @@ class Indexer {
     this.lastSeenBlockHashes = {};
     this.lastSeenTxHashes = {};
     this.lastSeenUtxos = {};
+
+		this.events = new EventEmitter();
   }
 
-  createDatabase(key, binaryValue = false) {
+  createDatabase(key, binaryKey = false, binaryValue = false) {
     const options = {};
 
     if (binaryValue)
       options.valueEncoding = 'binary';
 
+    if (binaryKey)
+      options.keyEncoding = 'binary';
+
     this.db[key] = level(`${this.path}/${key}`, options);   
     this.dbBatches[key] = []; 
   }
 
-  async saveState() {
-    await this.processBatches();
+  saveState() {
+		return new Promise(async (fulfill, reject) => {	
+			if (this.workerActive) {
+			  // Wait for worker to finish
+			  const handler = async () => {
+					await this.processBatches();
+					this.events.removeListener('worker:quit', handler);
+					fulfill();
+				};
+
+	 			this.events.on('worker:quit', handler);
+				return;
+			}
+
+			await this.processBatches();
+			fulfill();
+		});
   }
 
   handleBlock(block, removed = false) {
+	  if (removed) { console.log('REMOVE', block.index, block.hash); return }
     const blockHash = block.block_identifier.hash;
     const blockData = syncBlockCache.get(blockHash);
 
@@ -154,7 +177,8 @@ class Indexer {
       process.exit(1);
 
     } finally {
-      this.workerActive = false;    
+      this.workerActive = false;
+	 		this.events.emit('worker:quit');		
     }
   }
 
@@ -289,7 +313,7 @@ class Indexer {
   async utxoExistsBySymbol(txSymbol, vout) {
     // 1. Step: Check args 
     if (txSymbol == null) {
-      console.error(`Null passed to utxoExistsBySymbol`);
+      console.error(`Null passed to utxoExistsBySymbol`); 
       return null;
     }
 
@@ -471,6 +495,7 @@ class Indexer {
 
   async getBlockSymbol(hash) {
     // Return symbol from the last seen cache.
+    // console.log(hash); 
     const isLastSeen = this.lastSeenBlockHashes[hash];
     if (isLastSeen != null) return isLastSeen;
 
@@ -604,11 +629,11 @@ class Indexer {
     this.createDatabase('metadata');
     this.checkFeatures(this.db['metadata']);
 
-    this.createDatabase('block-sym');
-    this.createDatabase('tx-sym');
+    this.createDatabase('block-sym', true, false);
+    this.createDatabase('tx-sym', true, false);
     this.createDatabase('address-sym');
 
-    this.createDatabase('utxo', true);
+    this.createDatabase('utxo', true, true);
     this.createDatabase('address-utxos');
     this.createDatabase('block-height');
 
