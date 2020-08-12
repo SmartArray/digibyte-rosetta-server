@@ -136,6 +136,6 @@ EXPOSE    12024/tcp     14022/tcp     14023/tcp     12026/tcp
 #RUN ln -s /usr/local/bin/digibyte-cli /usr/bin/digibyte-cli
 
 RUN echo "${ROOTDATADIR}"
-COPY run.sh "${ROOTDATADIR}"
+COPY run.sh "${ROOTDATADIR}/docker_entrypoint.sh"
 
-ENTRYPOINT ["./run.sh"]
+ENTRYPOINT ["./docker_entrypoint.sh"]

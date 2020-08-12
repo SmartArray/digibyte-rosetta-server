@@ -1,6 +1,5 @@
-#!/bin/bash
-
-source ~/env
+#!/bin/sh
+. ~/env
 
 set -e
 
