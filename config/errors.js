@@ -14,6 +14,9 @@ const errors = {
   UNABLE_TO_FETCH_MEMPOOL_TX: new Types.Error(5, 'Could not fetch mempool transaction', true),
   NODE_SYNCING: new Types.Error(6, 'The underlying node is still syncing', true),
   UNABLE_TO_RETRIEVE_BALANCE: new Types.Error(7, 'The account balance could not be retrieved', true),
+
+  INVALID_CURVE_TYPE: new Types.Error(8, 'Curve type must be secp256k1', false),
+  UNABLE_TO_DERIVE_ADDRESS: new Types.Error(9, 'Unable to derive address from public key', false),
 };
 
 module.exports = errors;

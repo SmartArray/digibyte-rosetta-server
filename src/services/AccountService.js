@@ -26,6 +26,7 @@ const DigiByteIndexer = require('../digibyteIndexer');
 const rpc = require('../rpc');
 
 const Types = RosettaSDK.Client;
+
 /* Data API: Account */
 
 /**

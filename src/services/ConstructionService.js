@@ -20,8 +20,22 @@
  */
 
 const RosettaSDK = require('rosetta-node-sdk');
+const {
+  Address,
+  PublicKey,
+  Networks,
+} = require('bitcore-lib');
 
-/* Data API: Construction */
+const rpc = require('../rpc');
+const Config = require('../../config');
+const Errors = require('../../config/errors');
+const CustomNetworks = require('../CustomNetworks');
+
+const Types = RosettaSDK.Client;
+
+const Network = CustomNetworks[Config.network];
+
+/* Construction API */
 
 /**
 * Get Transaction Construction Metadata
@@ -47,10 +61,113 @@ const constructionSubmit = async (params) => {
   return {};
 };
 
+/**
+* Create Network Transaction from Signatures
+* Combine creates a network-specific transaction from an unsigned transaction and an array of provided signatures. The signed transaction returned from this method will be sent to the `/construction/submit` endpoint by the caller.
+*
+* constructionCombineRequest ConstructionCombineRequest
+* returns ConstructionCombineResponse
+* */
+const constructionCombine = async (params) => {
+  const { constructionSubmitRequest } = params;
+  return {};
+};
+
+/**
+* Derive an Address from a PublicKey
+* Derive returns the network-specific address associated with a public key. Blockchains that require an on-chain action to create an account should not implement this method.
+*
+* constructionDeriveRequest ConstructionDeriveRequest
+* returns ConstructionDeriveResponse
+* */
+const constructionDerive = async (params) => {
+  const { constructionSubmitRequest } = params;
+  const { public_key, network_identifier } = constructionSubmitRequest;
+
+  if (public_key.curve_type != 'secp256k1') return Errors.INVALID_CURVE_TYPE;
+
+  try {
+    const pubKey = new PublicKey(public_key.hex_bytes);
+    const address = Address.fromPublicKey(pubKey, Network);
+    return new Types.ConstructionDeriveResponse(address.toString());
+
+  } catch (e) {
+    return Errors.UNABLE_TO_DERIVE_ADDRESS
+      .addDetails(e.message);
+  }
+};
+
+/**
+* Get the Hash of a Signed Transaction
+* TransactionHash returns the network-specific transaction hash for a signed transaction.
+*
+* constructionHashRequest ConstructionHashRequest
+* returns TransactionIdentifierResponse
+* */
+const constructionHash = async (params) => {
+  const { constructionSubmitRequest } = params;
+  return {};
+};
+
+/**
+* Parse a Transaction
+* Parse is called on both unsigned and signed transactions to understand the intent of the formulated transaction. This is run as a sanity check before signing (after `/construction/payloads`) and before broadcast (after `/construction/combine`).
+*
+* constructionParseRequest ConstructionParseRequest
+* returns ConstructionParseResponse
+* */
+const constructionParse = async (params) => {
+  const { constructionSubmitRequest } = params;
+  return {};
+};
+
+/**
+* Generate an Unsigned Transaction and Signing Payloads
+* Payloads is called with an array of operations and the response from `/construction/metadata`. It returns an unsigned transaction blob and a collection of payloads that must be signed by particular addresses using a certain SignatureType. The array of operations provided in transaction construction often times can not specify all \"effects\" of a transaction (consider invoked transactions in Ethereum). However, they can deterministically specify the \"intent\" of the transaction, which is sufficient for construction. For this reason, parsing the corresponding transaction in the Data API (when it lands on chain) will contain a superset of whatever operations were provided during construction.
+*
+* constructionPayloadsRequest ConstructionPayloadsRequest
+* returns ConstructionPayloadsResponse
+* */
+const constructionPayloads = async (params) => {
+  const { constructionSubmitRequest } = params;
+  return {};
+};
+
+/**
+* Create a Request to Fetch Metadata
+* Preprocess is called prior to `/construction/payloads` to construct a request for any metadata that is needed for transaction construction given (i.e. account nonce). The request returned from this method will be used by the caller (in a different execution environment) to call the `/construction/metadata` endpoint.
+*
+* constructionPreprocessRequest ConstructionPreprocessRequest
+* returns ConstructionPreprocessResponse
+* */
+const constructionPreprocess = async (params) => {
+  const { constructionSubmitRequest } = params;
+  return {};
+};
+
 module.exports = {
   /* /construction/metadata */
   constructionMetadata,
 
   /* /construction/submit */
   constructionSubmit,
+
+  /* /construction/combine */
+  constructionCombine,
+
+  /* /construction/derive */
+  constructionDerive,
+
+  /* /construction/hash */
+  constructionHash,
+
+  /* /construction/parse */
+  constructionParse,
+
+  /* /construction/payloads */
+  constructionPayloads,
+
+  /* /construction/preprocess */
+  constructionPreprocess,  
 };
+

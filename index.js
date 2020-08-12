@@ -74,13 +74,19 @@ Server.register('/account/balance', ServiceHandlers.Account.balance);
 Server.register('/mempool', ServiceHandlers.Mempool.mempool);
 Server.register('/mempool/transaction', ServiceHandlers.Mempool.mempoolTransaction);
 
-/* Data API: Construction */
-Server.register('/construction/metadata', ServiceHandlers.Construction.constructioMetadata);
+/* Construction API */
+Server.register('/construction/metadata', ServiceHandlers.Construction.constructionMetadata);
 Server.register('/construction/submit', ServiceHandlers.Construction.constructionSubmit);
+Server.register('/construction/combine', ServiceHandlers.Construction.constructionCombine);
+Server.register('/construction/derive', ServiceHandlers.Construction.constructionDerive);
+Server.register('/construction/hash', ServiceHandlers.Construction.constructionHash);
+Server.register('/construction/parse', ServiceHandlers.Construction.constructionParse);
+Server.register('/construction/payloads', ServiceHandlers.Construction.constructionPayloads);
+Server.register('/construction/preprocess', ServiceHandlers.Construction.constructionPreprocess);
 
 /* Initialize Syncer */
 const startSyncer = async () => {
-  console.log(`Starting sync from height ${DigiByteIndexer.lastBlockSymbol+1}...`);
+  console.log(`Starting sync from height ${DigiByteIndexer.lastBlockSymbol + 1}...`);
   await DigiByteSyncer.initSyncer();
 
   continueSyncIfNeeded();
@@ -116,7 +122,33 @@ const continueSyncIfNeeded = async () => {
   });
 };
 
-DigiByteIndexer.initIndexer()
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+const startServer = async () => {
+  Server.launch();
+};
+
+const checkConnection = async () => {
+  process.stdout.write('Waiting for RPC node to be ready...');
+
+  while (true) {
+    try {
+      const response = await rpc.getBlockCountAsync();
+      if (response.result == 0) throw new Error('Block height is zero');
+      break;
+
+    } catch (e) {
+      await wait(30000);
+      process.stdout.write('.');
+    }
+  }
+
+  console.log(' RPC Node ready!');
+};
+
+checkConnection()
+  .then(startServer)
+  .then(DigiByteIndexer.initIndexer())
   .then(startSyncer)
   .catch((e) => {
     console.error(`Could not start sync: ${e.message}`);

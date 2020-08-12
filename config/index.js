@@ -9,12 +9,12 @@ const DEFAULT_RPC_HOST = 'localhost';
 const DEFAULT_RPC_PROTO = 'http';
 const DEFAULT_LISTENING_PORT = 8080;
 const DEFAULT_DATA_PATH = './data';
+const DEFAULT_DGB_NETWORK = 'livenet';
 
 const config = {
   version: '1.0.0',
   rosettaVersion: RosettaSDK.Version || DEFAULT_ROSETTA_VERSION,
   digibyteVersion: process.env.DGB_VERSION,
-
   port: process.env.PORT || DEFAULT_LISTENING_PORT,
 
   data: {
@@ -29,6 +29,7 @@ const config = {
     rpc_proto: process.env.RPC_PROTO || DEFAULT_RPC_PROTO,
   },
 
+  network: process.env.DGB_NETWORK || DEFAULT_DGB_NETWORK,
   serverConfig: serverConfig,
 };
 

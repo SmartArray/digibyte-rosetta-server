@@ -62,75 +62,80 @@ RUN cd ${rootdatadir}/digibyte && ./autogen.sh \
 
 # Start the build process
 RUN cd ${rootdatadir}/digibyte \
-  && make -j$CORES \
+  && make \
   && make install
 
+# Delete source
+RUN rm -rf ${rootdatadir}/digibyte
+
 RUN mkdir -vp \
+  "/root/rosetta-node" \
   "${rootdatadir}/.digibyte" \
-  "${rootdatadir}/rosetta-node/data" 
+  "${rootdatadir}/utxodb" \
+  "/tmp/npm_install"
 
 # Copy and install rosetta implementation
-RUN mkdir -vp /tmp/npm_install
-COPY package.json package-lock.json /tmp/npm_install
-RUN cd tmp/npm_install && \
+COPY package.json package-lock.json /tmp/npm_install/
+RUN cd /tmp/npm_install && \
   npm set progress=false && \
   npm config set depth 0 && \
   npm install --only=production 
-RUN cp -a /tmp/npm_install/node_modules "${rootdatadir}/rosetta-node"
+RUN cp -a /tmp/npm_install/node_modules "/root/rosetta-node/"
 
-COPY src/ test/ index.js config "${rootdatadir}/rosetta-node"
-
-VOLUME ${rootdatadir}/.digibyte
+# Copy the source to rosetta node directory
+COPY . "/root/rosetta-node/"
 
 # Create digibyte.conf file
-RUN echo -e "datadir=${rootdatadir}/.digibyte/\n\
+RUN bash -c 'echo -e "\
 server=1\n\
 prune=${prunesize}\n\
 maxconnections=300\n\
 rpcallowip=127.0.0.1\n\
-daemon=${RUN_AS_DAEMON}\n\
+daemon=1\n\
 rpcuser=${rpc_username}\n\
-rpcpassword=$rpc_password}\n\
+rpcpassword=${rpc_password}\n\
 txindex=0\n\
 # Uncomment below if you need Dandelion disabled for any reason but it is left on by default intentionally\n\
 #disabledandelion=1\n\
 addresstype=bech32\n\
 testnet=${use_testnet}\n\
-regtest=${use_regtest}\n" > ${rootdatadir}/.digibyte/digibyte.conf
+regtest=${use_regtest}\n" | tee "${rootdatadir}/digibyte.conf"'
 
 # Set some environment variables
 ENV ROOTDATADIR "$rootdatadir"
+ENV ROSETTADIR "/root/rosetta-node"
 ENV DGB_VERSION "$dgb_version"
 ENV PORT $listening_port
-ENV DATA_PATH "${rootdatadir}/rosetta-node/data"
+ENV DATA_PATH "${rootdatadir}/utxodb"
 ENV RPC_USER "$rpc_username"
 ENV RPC_PASS "$rpc_password"
 
-RUN if [ "$use_testnet" == "0" ] && [ "$use_regtest" == "0" ]; \
-  then export RPC_PORT=14022; \
-  else if [ "$use_testnet" == "1" ] && [ "$use_regtest" == "0" ]; \
-  then export RPC_PORT=14024; \
-  else if [ "$use_testnet" == "0" ] && [ "$use_regtest" == "1" ]; \
-  then export RPC_PORT=18443; \
-  else export RPC_PORT=""; \
-fi
+RUN if [ "$use_testnet" = "0" ] && [ "$use_regtest" = "0" ]; \
+    then \
+      echo 'export RPC_PORT="14022"' >> ~/env; \
+      echo 'export DGB_NETWORK="livenet"' >> ~/env; \
+    elif [ "$use_testnet" = "1" ] && [ "$use_regtest" = "0" ]; \
+    then \
+      echo 'export RPC_PORT="14023"' >> ~/env; \
+      echo 'export DGB_NETWORK="testnet"' >> ~/env; \
+    elif [ "$use_testnet" = "0" ] && [ "$use_regtest" = "1" ]; \
+    then \
+      echo 'export RPC_PORT="18443"' >> ~/env; \
+      echo 'export DGB_NETWORK="regtest"' >> ~/env; \
+    else \
+      echo 'export RPC_PORT=""' >> ~/env; \
+      echo 'export DGB_NETWORK=""' >> ~/env; \
+    fi
 
-# Allow Mainnet P2P comms
-EXPOSE 12024
-
-# Allow Mainnet RPC
-EXPOSE 14022
-
-# Allow Testnet RPC
-EXPOSE 14023
-
-# Allow Testnet P2P comms
-EXPOSE 12026
+# Allow Communications:
+#         p2p mainnet   rpc mainnet   rpc testnet   p2p testnet
+EXPOSE    12024/tcp     14022/tcp     14023/tcp     12026/tcp
 
 # Create symlinks shouldn't be needed as they're installed in /usr/local/bin/
 #RUN ln -s /usr/local/bin/digibyted /usr/bin/digibyted
 #RUN ln -s /usr/local/bin/digibyte-cli /usr/bin/digibyte-cli
 
-#CMD /usr/local/bin/digibyted -conf=${rootdatadir}/.digibyte/digibyte.conf
-COPY run.sh ${ROOTDATADIR}
-ENTRYPOINT ["${ROOTDATADIR}/run.sh"]
+RUN echo "${ROOTDATADIR}"
+COPY run.sh "${ROOTDATADIR}"
+
+ENTRYPOINT ["./run.sh"]

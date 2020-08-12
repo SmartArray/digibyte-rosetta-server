@@ -49,6 +49,8 @@ module.exports = {
     errors.UNABLE_TO_FETCH_MEMPOOL_TX,
     errors.NODE_SYNCING,
     errors.UNABLE_TO_RETRIEVE_BALANCE,
+    errors.INVALID_CURVE_TYPE,
+    errors.UNABLE_TO_DERIVE_ADDRESS,
   ],
 
   operationTypes: {

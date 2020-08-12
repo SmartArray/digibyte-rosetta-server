@@ -9,8 +9,6 @@ const BLOCK_BATCH_SIZE = 200;
 const TX_BATCH_SIZE = 20000;
 const SATOSHI = 100000000;
 
-const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-
 const utxoValueSchema = new JSBinType({
   'sats': 'uint',
   'createdOnBlock': 'uint',

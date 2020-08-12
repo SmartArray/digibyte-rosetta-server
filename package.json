@@ -1,6 +1,6 @@
 {
   "name": "digibyte-rosetta-server",
-  "version": "1.0.0",
+  "version": "1.0.0", 
   "description": "Server implementation using Rosetta SDK",
   "main": "index.js",
   "scripts": {
@@ -9,11 +9,12 @@
     "dev": "nodemon ."
   },
   "dependencies": {
+    "rosetta-node-sdk": "git+https://github.com/SmartArray/digibyte-rosetta-nodeapi.git#1.4.1",
+    "bitcore-lib": "^8.22.0",
     "bitcoind-rpc": "^0.8.1",
-    "bluebird": "^3.7.2",
     "js-binary": "^1.2.0",
-    "level": "^6.0.1",
-    "rosetta-node-sdk": "git+https://github.com/SmartArray/digibyte-rosetta-nodeapi.git"
+    "bluebird": "^3.7.2",
+    "level": "^6.0.1"
   },
   "keywords": [
     "rosetta",
