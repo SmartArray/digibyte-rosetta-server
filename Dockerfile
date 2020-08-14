@@ -99,6 +99,7 @@ txindex=0\n\
 #disabledandelion=1\n\
 addresstype=bech32\n\
 testnet=${use_testnet}\n\
+rpcworkqueue=32\n\
 regtest=${use_regtest}\n" | tee "${rootdatadir}/digibyte.conf"'
 
 # Set some environment variables
