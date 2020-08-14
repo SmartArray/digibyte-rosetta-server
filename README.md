@@ -42,3 +42,10 @@ To have some example requests to test the reachability of your node using curl, 
 
 ## Current State
 Currently, only the [Rosetta Data API](https://www.rosetta-api.org/docs/data_api_introduction.html) is implemented by this node. The Construction API will be completed soon.
+
+## ToDos
+- [ ] Implement Construction API for Offline and Online Environments
+- [ ] Test the node using coinbase's [rosetta-cli](https://github.com/coinbase/rosetta-cli.git)
+- [ ] Run the mainnet node and wait for full sync
+- [ ] Test some utxo balance checks
+- [ ] Setup automated tests
