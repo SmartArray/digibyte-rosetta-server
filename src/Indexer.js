@@ -10,7 +10,7 @@ const TX_BATCH_SIZE = 20000;
 const SATOSHI = 100000000;
 
 const utxoValueSchema = new JSBinType({
-  'sats': 'uint',
+  'sats': 'float',
   'createdOnBlock': 'uint',
   'spentOnBlock?': 'uint',
   'spentInTx?': 'uint',
