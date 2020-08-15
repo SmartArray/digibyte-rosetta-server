@@ -37,14 +37,12 @@ const EMPTY_UTXO_LIST = AddressValueSchema.encode({
 
 const PREFIX_BLOCK_SYM     = 'B';
 const PREFIX_TX_SYM        = 'T';
-const PREFIX_ADDRESS_SYM   = 'A';
 const PREFIX_UTXO          = 'U';
 const PREFIX_ADDRESS_UTXOS = 'X';
 
 const VALID_PREFIXES = [
   PREFIX_BLOCK_SYM,
   PREFIX_TX_SYM,
-  PREFIX_ADDRESS_SYM,
   PREFIX_UTXO,
   PREFIX_ADDRESS_UTXOS
 ];
@@ -774,7 +772,6 @@ class Indexer {
     // this.createDatabase('metadata');
     this.createDatabaseInfo('block-sym', PREFIX_BLOCK_SYM);
     this.createDatabaseInfo('tx-sym', PREFIX_TX_SYM);
-    this.createDatabaseInfo('address-sym', PREFIX_ADDRESS_SYM);
     this.createDatabaseInfo('utxo', PREFIX_UTXO);
     this.createDatabaseInfo('address-utxos', PREFIX_ADDRESS_UTXOS);
 
