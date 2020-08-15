@@ -347,7 +347,7 @@ class Indexer {
     const ops = this.dbBatches.utxo;
     const operations = this.db.utxo.processList(ops);
 
-    list.push(...operations);
+    for (let op of operations) list.push(op);
     ops.length = 0;
   }
 
@@ -355,7 +355,7 @@ class Indexer {
     const ops = this.dbBatches['tx-sym'];
     const operations = this.db['tx-sym'].processList(ops);
 
-    list.push(...operations);
+    for (let op of operations) list.push(op);
     ops.length = 0;
   }
 
@@ -363,7 +363,7 @@ class Indexer {
     const ops = this.dbBatches['block-sym'];
     const operations = this.db['block-sym'].processList(ops);
 
-    list.push(...operations);
+    for (let op of operations) list.push(op);
     ops.length = 0;
   }
 
