@@ -148,7 +148,7 @@ const checkConnection = async () => {
 
 checkConnection()
   .then(startServer)
-  .then(DigiByteIndexer.initIndexer())
+  .then(DigiByteIndexer.initIndexer)
   .then(startSyncer)
   .catch((e) => {
     console.error(`Could not start sync: ${e.message}`);
