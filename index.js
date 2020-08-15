@@ -146,11 +146,21 @@ const checkConnection = async () => {
   console.log(' RPC Node ready!');
 };
 
-checkConnection()
-  .then(startServer)
-  .then(DigiByteIndexer.initIndexer)
-  .then(startSyncer)
-  .catch((e) => {
-    console.error(`Could not start sync: ${e.message}`);
-    console.error(e);
-  });
+const init = async () => {
+  // Wait until rpc is reachable
+  await checkConnection();
+
+  // Start the REST Server
+  await startServer();
+
+  // Init the UTXO indexing service
+  await DigiByteIndexer.initIndexer();
+
+  // Start the UTXO indexer
+  await startSyncer();
+};
+
+init().catch((e) => {
+  console.error(`Could not start sync: ${e.message}`);
+  console.error(e);
+});
