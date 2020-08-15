@@ -30,7 +30,7 @@ const config = {
   },
 
   network: process.env.DGB_NETWORK || DEFAULT_DGB_NETWORK,
-  serverConfig: serverConfig,
+  serverConfig,
 };
 
 if (!config.rosettaVersion) throw new Error('RosettaVersion not defined');

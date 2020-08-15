@@ -9,7 +9,7 @@ const livenet = {
   privatekeyOld: 0x9e,
   scripthash: 0x3f,
   scripthashTwo: 0x05,
-  xpubkey:  0x0488b21e,
+  xpubkey: 0x0488b21e,
   xprivkey: 0x0488ade4,
   networkMagic: 0xfac3b6da,
   port: 12024,
@@ -28,7 +28,7 @@ const testnet = {
   privatekey: 0xfe,
   scripthash: 0x8c,
   xpubkey: 0x043587cf,
-  xprivkey: 0x04358394
+  xprivkey: 0x04358394,
 };
 
 const regtest = {

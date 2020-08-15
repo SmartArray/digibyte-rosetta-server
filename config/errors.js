@@ -1,4 +1,5 @@
 const RosettaSDK = require('rosetta-node-sdk');
+
 const Types = RosettaSDK.Client;
 
 Types.Error.prototype.addDetails = function addDetails(data) {
@@ -12,7 +13,7 @@ const errors = {
   ENDPOINT_DISABLED: new Types.Error(3, 'This endpoint is disabled', false),
   UNABLE_TO_FETCH_MEMPOOL_TXS: new Types.Error(4, 'Could not fetch mempool transactions', true),
   UNABLE_TO_FETCH_MEMPOOL_TX: new Types.Error(5, 'Could not fetch mempool transaction', true),
-  NODE_SYNCING: new Types.Error(6, 'The underlying node is still syncing', true),
+  NODE_SYNCING: new Types.Error(6, 'The requested data is not available, as the node is still syncing.', true),
   UNABLE_TO_RETRIEVE_BALANCE: new Types.Error(7, 'The account balance could not be retrieved', true),
 
   INVALID_CURVE_TYPE: new Types.Error(8, 'Curve type must be secp256k1', false),

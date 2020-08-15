@@ -22,7 +22,6 @@
 const RosettaSDK = require('rosetta-node-sdk');
 
 const config = require('./config');
-const networkIdentifier = require('./config/networkIdentifier');
 const ServiceHandlers = require('./src/services');
 const DigiByteSyncer = require('./src/digibyteSyncer');
 const DigiByteIndexer = require('./src/digibyteIndexer');
@@ -122,7 +121,7 @@ const continueSyncIfNeeded = async () => {
   });
 };
 
-const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const startServer = async () => {
   Server.launch();
@@ -131,12 +130,11 @@ const startServer = async () => {
 const checkConnection = async () => {
   process.stdout.write('Waiting for RPC node to be ready...');
 
-  while (true) {
+  for (;;) {
     try {
       const response = await rpc.getBlockCountAsync();
       if (response.result == 0) throw new Error('Block height is zero');
       break;
-
     } catch (e) {
       await wait(30000);
       process.stdout.write('.');

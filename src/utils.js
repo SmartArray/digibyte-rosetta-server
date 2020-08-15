@@ -1,11 +1,14 @@
 const RosettaSDK = require('rosetta-node-sdk');
+
 const Types = RosettaSDK.Client;
 
 const Config = require('../config');
 const Constants = require('./constants');
+const DigiByteSyncer = require('./digibyteSyncer');
+
 const OperationTypes = Config.serverConfig.operationTypes;
 const OperationStatus = Config.serverConfig.operationStatuses;
-const currency = Config.serverConfig.currency;
+const { currency } = Config.serverConfig;
 
 const blockMetadata = (block) => {
   const ret = {};
@@ -27,17 +30,17 @@ const txOperations = (tx, isMempoolTx = false) => {
   // ToDo: Pending state?
   const status = isMempoolTx ? OperationStatus.SUCCESS.status : OperationStatus.SUCCESS.status;
 
-  tx.vin.forEach(vin => {
+  tx.vin.forEach((vin) => {
     if (vin.coinbase && tx.vin.length == 1) {
       // Coinbase TX (generated new coins).
       // Create a COINBASE Operation for every output:
 
-      tx.vout.forEach(output => {
+      tx.vout.forEach((output) => {
         if (!output.scriptPubKey) return;
         if (output.scriptPubKey.type == 'nonstandard') return;
 
-        if (!Array.isArray(output.scriptPubKey.addresses) ||
-            output.scriptPubKey.addresses.length > 1) {
+        if (!Array.isArray(output.scriptPubKey.addresses)
+            || output.scriptPubKey.addresses.length > 1) {
           // ToDo: Handle Multisig
           return;
         }
@@ -47,19 +50,18 @@ const txOperations = (tx, isMempoolTx = false) => {
         ret.push(Types.Operation.constructFromObject({
           operation_identifier: operationId++,
           type: OperationTypes.COINBASE,
-          status: status,
+          status,
           account: new Types.AccountIdentifier(address),
           amount: Types.Amount.constructFromObject({
             value: parseInt(output.value * Constants.SATOSHIS),
-            currency: currency,
+            currency,
           }),
           // metadata: {},
         }));
       });
-
     } else {
       // Transfer
-      tx.vout.forEach(output => {
+      tx.vout.forEach((output) => {
         if (output.scriptPubKey.addresses.length > 1) {
           // ToDo: Handle Multisig
           return;
@@ -72,11 +74,11 @@ const txOperations = (tx, isMempoolTx = false) => {
           operation_identifier: nextOperationId,
           // related_operations: [],
           type: OperationTypes.TRANSFER,
-          status: status,
+          status,
           account: new Types.AccountIdentifier(address),
           amount: Types.Amount.constructFromObject({
             value: parseInt(output.value * Constants.SATOSHIS),
-            currency: currency,
+            currency,
           }),
           // metadata: {},
         }));
@@ -97,7 +99,7 @@ const txOperations = (tx, isMempoolTx = false) => {
         //       currency: currency,
         //     }),
         //     // metadata: {},
-        //   }));          
+        //   }));
         // }
       });
     }
@@ -121,7 +123,7 @@ const transactionToRosettaType = function (tx, isMempoolTx = false) {
     transaction_identifier: new Types.TransactionIdentifier(tx.txid),
     operations: txOperations(tx, isMempoolTx),
     metadata: txMetadata(tx),
-  })
+  });
 
   return typedTx;
 };

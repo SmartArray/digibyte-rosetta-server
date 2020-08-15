@@ -1,12 +1,13 @@
 {
   "name": "digibyte-rosetta-server",
-  "version": "1.0.0", 
+  "version": "1.0.0",
   "description": "Server implementation using Rosetta SDK",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js",
-    "dev": "nodemon ."
+    "dev": "nodemon .",
+    "lint": "eslint ."
   },
   "dependencies": {
     "rosetta-node-sdk": "git+https://github.com/SmartArray/digibyte-rosetta-nodeapi.git#1.4.1",
@@ -26,6 +27,13 @@
   "license": "MIT",
   "devDependencies": {
     "chai": "^4.2.0",
+    "eslint": "^7.7.0",
+    "eslint-config-airbnb": "^18.2.0",
+    "eslint-config-airbnb-base": "^14.2.0",
+    "eslint-plugin-import": "^2.22.0",
+    "eslint-plugin-jsx-a11y": "^6.3.1",
+    "eslint-plugin-react": "^7.20.6",
+    "eslint-plugin-react-hooks": "^4.0.0",
     "mocha": "^8.1.1"
   }
 }

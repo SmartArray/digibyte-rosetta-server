@@ -20,6 +20,7 @@
  */
 
 const RosettaSDK = require('rosetta-node-sdk');
+
 const Types = RosettaSDK.Client;
 
 const Config = require('../../config');
@@ -32,7 +33,7 @@ const Errors = require('../../config/errors');
 * Get List of Available Networks
 * This endpoint returns a list of NetworkIdentifiers that the Rosetta server can handle.
 *
-* metadataRequest MetadataRequest 
+* metadataRequest MetadataRequest
 * returns NetworkListResponse
 * */
 const networkList = async (params) => {
@@ -49,7 +50,7 @@ const networkList = async (params) => {
 * Get Network Options
 * This endpoint returns the version information and allowed network-specific types for a NetworkIdentifier. Any NetworkIdentifier returned by /network/list should be accessible here.  Because options are retrievable in the context of a NetworkIdentifier, it is possible to define unique options for each network.
 *
-* networkRequest NetworkRequest 
+* networkRequest NetworkRequest
 * returns NetworkOptionsResponse
 * */
 const networkOptions = async (params) => {
@@ -74,7 +75,7 @@ const networkOptions = async (params) => {
 * Get Network Status
 * This endpoint returns the current status of the network requested. Any NetworkIdentifier returned by /network/list should be accessible here.
 *
-* networkRequest NetworkRequest 
+* networkRequest NetworkRequest
 * returns NetworkStatusResponse
 * */
 const networkStatus = async (params) => {
@@ -102,16 +103,14 @@ const networkStatus = async (params) => {
     );
 
     const peersData = await rpc.getPeerInfoAsync();
-    peers = peersData.result.map(p => 
-      Types.Peer.constructFromObject({
-        peer_id: p.id,
-        metadata: {
-          addr: p.addr,
-          version: p.version,
-          subver: p.subver,
-        },
-      })
-    );
+    peers = peersData.result.map((p) => Types.Peer.constructFromObject({
+      peer_id: p.id,
+      metadata: {
+        addr: p.addr,
+        version: p.version,
+        subver: p.subver,
+      },
+    }));
   } catch (e) {
     console.error(e);
     throw Errors.UNABLE_TO_RETRIEVE_NODE_STATUS;

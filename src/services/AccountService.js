@@ -33,14 +33,14 @@ const Types = RosettaSDK.Client;
 * Get an Account Balance
 * Get an array of all Account Balances for an Account Identifier and the Block Identifier at which the balance lookup was performed.  Some consumers of account balance data need to know at which block the balance was calculated to reconcile account balance changes.  To get all balances associated with an account, it may be necessary to perform multiple balance requests with unique Account Identifiers.  If the client supports it, passing nil AccountIdentifier metadata to the request should fetch all balances (if applicable).  It is also possible to perform a historical balance lookup (if the server supports it) by passing in an optional BlockIdentifier.
 *
-* accountBalanceRequest AccountBalanceRequest 
+* accountBalanceRequest AccountBalanceRequest
 * returns AccountBalanceResponse
 * */
 const balance = async (params) => {
   const { accountBalanceRequest } = params;
 
   // Get the requested address
-  const address = accountBalanceRequest.account_identifier.address;
+  const { address } = accountBalanceRequest.account_identifier;
 
   // Either block index or block hash
   let atBlock = null;
@@ -64,7 +64,7 @@ const balance = async (params) => {
   try {
     // Get the Account Balance from the UTXO Indexer
     const accountData = await DigiByteIndexer.getAccountBalance(address, atBlock);
-    const balance = accountData.balance;
+    const { balance } = accountData;
 
     // BlockSymbol
     blockIdentifier.index = accountData.blockSymbol;
@@ -72,7 +72,7 @@ const balance = async (params) => {
 
     // If the hash was not yet set, get the block hash using rpc.
     if (!blockIdentifier.hash) {
-      console.log('Retrieving the block hash for symbol', accountData)
+      console.log('Retrieving the block hash for symbol', accountData);
       blockIdentifier.hash = await rpc.getBlockHashAsync(accountData.blockSymbol);
     }
 
@@ -89,8 +89,7 @@ const balance = async (params) => {
       blockIdentifier,
       balances,
     );
-
-  } catch(e) {
+  } catch (e) {
     return Errors.UNABLE_TO_RETRIEVE_BALANCE.addDetails({
       message: e.message,
     });

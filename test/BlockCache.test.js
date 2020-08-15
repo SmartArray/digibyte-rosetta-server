@@ -1,10 +1,9 @@
-
 const { expect } = require('chai');
 
-describe('BlockCache', function () {
+describe('BlockCache', () => {
   const BlockCache = require('../BlockCache');
 
-  it('should have a default instance', function () {
+  it('should have a default instance', () => {
     const SyncBlockCache = require('../syncBlockCache');
     SyncBlockCache.put('1', 'a');
 
@@ -12,7 +11,7 @@ describe('BlockCache', function () {
     expect(existing).to.equal('a');
   });
 
-  it('should successfully store a block', function () {
+  it('should successfully store a block', () => {
     const blockCache = new BlockCache(5);
     blockCache.put('1', 'a');
 
@@ -20,7 +19,7 @@ describe('BlockCache', function () {
     expect(existing).to.equal('a');
   });
 
-  it('should wipe the oldest elements', function () {
+  it('should wipe the oldest elements', () => {
     const blockCache = new BlockCache(5);
     blockCache.put('1', 'a');
     blockCache.put('2', 'b');
@@ -34,5 +33,5 @@ describe('BlockCache', function () {
 
     const existing = blockCache.get('3');
     expect(existing).to.equal('c');
-  });  
+  });
 });

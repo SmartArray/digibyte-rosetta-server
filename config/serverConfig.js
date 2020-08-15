@@ -1,5 +1,5 @@
 const RosettaSDK = require('rosetta-node-sdk');
-const Config = require('./');
+
 const Types = RosettaSDK.Client;
 
 const errors = require('./errors');

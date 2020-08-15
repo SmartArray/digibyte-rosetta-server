@@ -11,7 +11,7 @@ class Syncer extends EventEmitter {
       server: {
         protocol: 'http',
         host: 'localhost',
-        port: '8080',        
+        port: '8080',
       },
     });
 
@@ -26,7 +26,7 @@ class Syncer extends EventEmitter {
     // console.log('Initializing Syncer...');
 
     /* Create a fetcher */
-    const fetcher = this.fetcher;
+    const { fetcher } = this;
     const { networkStatus } = await fetcher.initializeAsserter();
 
     /* Define some options for the syncer */
@@ -41,7 +41,7 @@ class Syncer extends EventEmitter {
       maxSync,
     });
 
-    /* Handle events of the syncer*/
+    /* Handle events of the syncer */
     syncer.on(RosettaSDK.Syncer.Events.BLOCK_ADDED, this.blockAdded.bind(this));
     syncer.on(RosettaSDK.Syncer.Events.BLOCK_REMOVED, this.blockRemoved.bind(this));
     syncer.on(RosettaSDK.Syncer.Events.BLOCK_REMOVED, this.syncStopped.bind(this));
@@ -52,7 +52,7 @@ class Syncer extends EventEmitter {
     // console.log('Successfully initialized syncer!');
     return syncer;
   }
-  
+
   sync(start, end) {
     return this.syncer.sync(start, end);
   }
@@ -77,7 +77,7 @@ class Syncer extends EventEmitter {
 
   syncStopped() {
 
-  }  
-};
+  }
+}
 
 module.exports = Syncer;

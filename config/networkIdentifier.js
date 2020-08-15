@@ -1,4 +1,5 @@
 const RosettaSDK = require('rosetta-node-sdk');
+
 const Types = RosettaSDK.Client;
 
 const Blockchain = 'dgb';
