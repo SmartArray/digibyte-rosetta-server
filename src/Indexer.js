@@ -742,7 +742,6 @@ class Indexer {
       const blockSymbol = await this._db.get('latestBlockSymbol');
       this.lastBlockSymbol = returnSymbol(blockSymbol);
     } catch (e) {
-      console.error(e);
       this.lastBlockSymbol = -1;
     }    
   }
