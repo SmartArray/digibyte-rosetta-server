@@ -721,7 +721,7 @@ class Indexer {
 
   async initBestBlockHash() {
     try {
-      const bestBlockHash = await this.db['metadata'].get('bestBlockHash');
+      const bestBlockHash = await this._db.get('bestBlockHash');
       this.bestBlockHash = bestBlockHash;
     } catch (e) {
       this.bestBlockHash = null;
@@ -730,7 +730,7 @@ class Indexer {
 
   async initGenesisHash() {
     try {
-      const genesisBlockHash = await this.db['metadata'].get('genesisBlockHash');
+      const genesisBlockHash = await this._db.get('genesisBlockHash');
       this.genesisBlockHash = genesisBlockHash;
     } catch (e) {
       this.genesisBlockHash = null;
@@ -739,16 +739,17 @@ class Indexer {
 
   async initBlockSymbol() {
     try {
-      const blockSymbol = await this.db['metadata'].get('latestBlockSymbol');
+      const blockSymbol = await this._db.get('latestBlockSymbol');
       this.lastBlockSymbol = returnSymbol(blockSymbol);
     } catch (e) {
+      console.error(e);
       this.lastBlockSymbol = -1;
     }    
   }
 
   async initTxSymbol() {
     try {
-      const txSymbol = await this.db['metadata'].get('latestTxSymbol');
+      const txSymbol = await this._db.get('latestTxSymbol');
       this.lastTxSymbol = returnSymbol(txSymbol);
     } catch (e) {
       this.lastTxSymbol = -1;
