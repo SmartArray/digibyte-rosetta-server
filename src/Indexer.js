@@ -28,6 +28,7 @@ const UtxoKeySchema = new JSBinType({
 const AddressValueSchema = new JSBinType({
   txSymbol: ['uint'],
   vout: ['uint'],
+  'address?': 'string',
 });
 
 const EMPTY_UTXO_LIST = AddressValueSchema.encode({
@@ -78,6 +79,7 @@ const hexToBin = (hexString) => {
 };
 
 const serializeAddress = (address) => address;
+const deserializeAddress = (serializedAddress) => serializedAddress;
 
 class DatabaseWrapper {
   constructor(dbInstance, namespace, prefix) {
@@ -143,6 +145,7 @@ class Indexer {
     this.lastBlockSymbol = undefined;
     this.lastTxSymbol = undefined;
     this.lastAddressSymbol = undefined;
+    this.safeLastBlockSymbol = undefined;
 
     this.genesisBlockHashUpdated = false;
 
@@ -152,7 +155,7 @@ class Indexer {
 
     this.lastSeenBlockHashes = {};
     this.lastSeenTxHashes = {};
-    this.lastSeenAddresses = {};
+    this.lastSeenAddresses = {}; // 'address' -> 'address symbol'
     this.lastSeenUtxos = {};
     this.lastAddressUtxos = {};
 
@@ -287,6 +290,9 @@ class Indexer {
     // console.log('VERBOSE: Metadata saved');
 
     batchedOperations.length = 0;
+
+    // It is now safe to query block up to `this.lastBlockSymbol`
+    this.safeLastBlockSymbol = this.lastBlockSymbol;
   }
 
   async processBatchesIfNeeded() {
@@ -319,7 +325,7 @@ class Indexer {
       const addressSymbol = await this.getAddressSymbolByAddress(address);
 
       const serializedUtxoList = await this.db['address-utxos'].get(addressSymbol)
-        .catch((e) => EMPTY_UTXO_LIST);
+        .catch(() => EMPTY_UTXO_LIST);
 
       // Decode the existing structure
       const deserializedUtxoList = AddressValueSchema.decode(serializedUtxoList);
@@ -327,6 +333,7 @@ class Indexer {
       // Concatenate existing utxos with new utxos
       deserializedUtxoList.txSymbol = deserializedUtxoList.txSymbol.concat(utxoList.txSymbol);
       deserializedUtxoList.vout = deserializedUtxoList.vout.concat(utxoList.vout);
+      deserializedUtxoList.address = serializeAddress(address);
 
       // Create database operation
       const operation = {
@@ -470,7 +477,7 @@ class Indexer {
 
     // 3. Step: Fetch from database using generated key
     const value = await this.db.utxo.get(key)
-      .catch((e) => null);
+      .catch(() => null);
 
     if (value == null) {
       console.error('Could not find utxo in utxo db');
@@ -561,7 +568,7 @@ class Indexer {
           decoded.address,
           blockSymbol,
           txSymbol,
-          blockSymbol,
+          decoded.spentOnBlock,
           pair.key
         );
       } catch (e) {
@@ -586,7 +593,7 @@ class Indexer {
 
     // Get the address symbol from database
     const symbolData = await this.db['address-sym'].get(serializedAddress)
-      .catch((e) => null);
+      .catch(() => null);
 
     let symbol = symbolData != null ? decodeSymbol(symbolData) : null;
 
@@ -601,13 +608,15 @@ class Indexer {
       });
 
       this.lastSeenAddresses[addressString] = symbol;
-
     }
 
-    return {
+    const ret = {
       key: addressString,
       value: symbol,
     };
+
+    console.log(ret);
+    return ret;
   }
 
   async getAddressSymbol(output) {
@@ -654,7 +663,7 @@ class Indexer {
       const identifier = `${pair.txid}:${pair.n}`;
 
       if (!pair.output.address || !pair.output.address.key) {
-        console.log(`Skipping ${identifier}`);
+        // console.log(`Skipping ${identifier}`);
         continue;
       }
 
@@ -721,7 +730,7 @@ class Indexer {
     if (isLastSeen != null) return isLastSeen;
 
     const encodedSymbol = await this.db['block-sym'].get(hexToBin(hash))
-      .catch((e) => null);
+      .catch(() => null);
 
     return returnSymbol(encodedSymbol);
   }
@@ -732,9 +741,31 @@ class Indexer {
     if (isLastSeen != null) return isLastSeen;
 
     const encodedSymbol = await this.db['tx-sym'].get(hexToBin(hash))
-      .catch((e) => null);
+      .catch(() => null);
 
     return returnSymbol(encodedSymbol);
+  }
+
+  async getAddressBySymbol(addressSymbol) {
+    if (this.lastAddressSymbol < addressSymbol)
+      throw new Error('Address does not exist yet');
+
+    try {
+      const serializedUtxoList = 
+        await this.db['address-utxos'].get(encodeSymbol(addressSymbol));
+
+      const utxoData = AddressValueSchema.decode(serializedUtxoList);
+
+      if (!utxoData.address) {
+        throw new Error('No address accociated with this symbol');
+      }
+
+      return utxoData.address;
+
+    } catch(e) {
+      console.error(e);
+      return null;
+    }
   }
 
   async getAccountBalance(address, atBlock = null) {
@@ -803,6 +834,39 @@ class Indexer {
     }
   }
 
+  async getUtxoData(txid, vout) {
+    try {
+      const utxo = await this.utxoExists(txid, vout);
+      if (utxo == null)
+        throw new Error(`Utxo ${txid}:${vout} does not exist`);
+
+      // eslint-disable-next-line no-unused-vars
+      const { key, value, symbol } = utxo;
+
+      const decoded = UtxoValueSchema.decode(value);
+      console.log(decoded);
+
+      const addressSymbol = decoded.address;
+      const sats = decoded.sats;
+
+      if (!addressSymbol)
+        throw new Error('Utxo exists but has no address accociated with it');
+
+      const address = await this.getAddressBySymbol(addressSymbol);
+      if (!address)
+        throw new Error(`Address symbol ${addressSymbol} could not be resolved`);
+
+      return {
+        address: deserializeAddress(address),
+        sats,
+      };
+
+    } catch(e) {
+      console.error(e);
+      return null;
+    }
+  }
+
   async initBestBlockHash() {
     try {
       const bestBlockHash = await this._db.get('bestBlockHash');
@@ -828,6 +892,8 @@ class Indexer {
     } catch (e) {
       this.lastBlockSymbol = -1;
     }
+
+    this.safeLastBlockSymbol = this.lastBlockSymbol;
   }
 
   async initTxSymbol() {

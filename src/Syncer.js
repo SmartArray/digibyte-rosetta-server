@@ -9,9 +9,7 @@ class Syncer extends EventEmitter {
 
     const fetcher = new RosettaSDK.Fetcher({
       server: {
-        protocol: 'http',
-        host: 'localhost',
-        port: '8080',
+        ...config,
       },
     });
 

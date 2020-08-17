@@ -37,6 +37,7 @@ const Errors = require('../../config/errors');
 * returns NetworkListResponse
 * */
 const networkList = async (params) => {
+  // eslint-disable-next-line no-unused-vars  
   const { metadataRequest } = params;
 
   const response = new Types.NetworkListResponse(
@@ -54,6 +55,7 @@ const networkList = async (params) => {
 * returns NetworkOptionsResponse
 * */
 const networkOptions = async (params) => {
+  // eslint-disable-next-line no-unused-vars  
   const { networkRequest } = params;
 
   const version = new Types.Version(
@@ -79,6 +81,7 @@ const networkOptions = async (params) => {
 * returns NetworkStatusResponse
 * */
 const networkStatus = async (params) => {
+  // eslint-disable-next-line no-unused-vars  
   const { networkRequest } = params;
 
   let currentBlockIdentifier;

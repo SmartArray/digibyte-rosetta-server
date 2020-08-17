@@ -23,13 +23,6 @@ const RosettaSDK = require('rosetta-node-sdk');
 
 const Types = RosettaSDK.Client;
 
-const Config = require('../../config');
-
-const OperationTypes = Config.serverConfig.operationTypes;
-const OperationStatus = Config.serverConfig.operationStatuses;
-const { currency } = Config.serverConfig;
-
-const Constants = require('../constants');
 const rpc = require('../rpc');
 const utils = require('../utils');
 const Errors = require('../../config/errors');
@@ -44,6 +37,7 @@ const Errors = require('../../config/errors');
 * returns MempoolResponse
 * */
 const mempool = async (params) => {
+  // eslint-disable-next-line no-unused-vars
   const { mempoolRequest } = params;
 
   const mempoolResponse = await rpc.getRawMemPoolAsync(true);

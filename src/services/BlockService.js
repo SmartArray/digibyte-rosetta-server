@@ -23,13 +23,14 @@ const RosettaSDK = require('rosetta-node-sdk');
 
 const Types = RosettaSDK.Client;
 
-const Config = require('../../config');
 const rpc = require('../rpc');
 const utils = require('../utils');
+const Config = require('../../config');
 const Errors = require('../../config/errors');
 
 const SyncBlockCache = require('../syncBlockCache');
 const DigiByteSyncer = require('../digibyteSyncer');
+const DigiByteIndexer = require('../digibyteIndexer');
 
 /* Data API: Block */
 
@@ -40,45 +41,65 @@ const DigiByteSyncer = require('../digibyteSyncer');
 * blockRequest BlockRequest
 * returns BlockResponse
 * */
-const block = async (params) => {
+const block = async (params, req) => {
   const { blockRequest } = params;
 
+  let blockData;
+  let parentBlock;  
+  let transactions;
+
+  /**
+   * Check if only the block index was specified during the BlockRequest.
+   * In that case, the block hash will be retrieved using direct rpc call
+   */
   if (blockRequest.block_identifier.index != null && !blockRequest.block_identifier.hash) {
-    // Get block hash if only index is set.
+    SyncBlockCache.get('')
     const hashResponse = await rpc.getBlockHashAsync(blockRequest.block_identifier.index);
     blockRequest.block_identifier.hash = hashResponse.result;
   }
 
-  const blockResponse = await rpc.getBlockAsync(blockRequest.block_identifier.hash, 2);
-  const blockData = blockResponse.result;
-  if (!blockData) {
-    throw Errors.COULD_NOT_FETCH_BLOCK;
+  /**
+   * Get the block data using rpc call, unless it was found in a local block cache.
+   * Return COULD_NOT_FETCH_BLOCK (retriable) if for some reason the request failed. 
+   */
+  blockData = SyncBlockCache.get(blockRequest.block_identifier.hash);
+  if (blockData == null) {
+    const blockResponse = await rpc.getBlockAsync(blockRequest.block_identifier.hash, 2);
+
+    blockData = blockResponse.result;
+    if (!blockData) {
+      throw Errors.COULD_NOT_FETCH_BLOCK;
+    }
+
+    /**
+     * Save the block in the block cache, so that the internal syncer
+     * can still use the original data in order to index the utxo set.
+     */
+    SyncBlockCache.put(
+      blockData.hash,
+      blockData,
+    );    
   }
 
-  // Save the block in the block cache, so that the internal syncer
-  // can still use the original data in order to index the utxo set.
-  // ToDo: Find a clean way to let the utxo syncer have access to
-  //   the original blocks.
-  SyncBlockCache.put(
-    blockData.hash,
-    blockData,
-  );
+  /**
+   * If the correct secret is set, this request is a request made by the
+   * utxo indexer.
+   */
+  const isSyncerRequest = req.headers['syncer-secret'] == Config.syncer.syncerSecret;
+  const requestedDataAvailable = DigiByteIndexer.safeLastBlockSymbol >= blockData.height;  
 
-  /* Create a Full Block Identifier */
+  /**
+   * Create a Full Block Identifier according to the Rosetta spec.
+   */
   const queriedBlock = new Types.BlockIdentifier(
     blockData.height,
     blockData.hash,
   );
 
-  // Exit if the utxo syncer hasn't reached the requested block height
-  if (DigiByteSyncer.lastBlockSymbol < blockData.height) {
-    throw Errors.NODE_SYNCING.addDetails({
-      syncedTo: DigiByteSyncer.lastBlockSymbol,
-    });
-  }
-
-  let parentBlock;
-
+  /**
+   * Generate the correct parent block identifier according to the
+   * Rosetta guidelines.
+   */
   if (queriedBlock.index == 0) {
     parentBlock = new Types.BlockIdentifier(
       blockData.height,
@@ -91,14 +112,34 @@ const block = async (params) => {
     );
   }
 
-  const transactions = blockData.tx.map((tx) => utils.transactionToRosettaType(tx));
+  if (requestedDataAvailable) {
+    /**
+     * Process transaction operations if the requested data
+     * was already indexed by the utxo syncer.
+     */    
+    transactions = await Promise.all(
+      blockData.tx.map((tx) => utils.transactionToRosettaType(tx))
+    );
 
+  } else if (!isSyncerRequest) {
+    /**
+     * Exit if the utxo syncer hasn't indexed the requested block height.
+     * This error won't be thrown if the request was made by the syncer.
+     */
+    throw Errors.NODE_SYNCING.addDetails({
+      syncedTo: DigiByteIndexer.safeLastBlockSymbol,
+    });
+  }
+
+  /**
+   * Construct the block object that is required in the BlockResponse.
+   */
   const block = Types.Block.constructFromObject({
     block_identifier: queriedBlock,
     parent_block_identifier: parentBlock,
     timestamp: blockData.time * 1000,
     transactions,
-    metadata: utils.blockMetadata(blockData),
+    metadata: utils.blockMetadata(blockData, requestedDataAvailable),
   });
 
   const otherTransactions = [];
@@ -112,6 +153,7 @@ const block = async (params) => {
 * blockTransactionRequest BlockTransactionRequest
 * returns BlockTransactionResponse
 * */
+// eslint-disable-next-line no-unused-vars
 const blockTransaction = async (params) => {
   throw Errors.ENDPOINT_DISABLED;
 };
