@@ -615,7 +615,6 @@ class Indexer {
       value: symbol,
     };
 
-    console.log(ret);
     return ret;
   }
 
@@ -683,6 +682,7 @@ class Indexer {
         block: blockSymbol,
         n: pair.n,
         sats: pair.sats,
+				address: pair.output.address.value,
       };
 
       await this.batchUtxoAdditionToAddress(tx, txSymbol, pair.output);
@@ -849,7 +849,7 @@ class Indexer {
       const addressSymbol = decoded.address;
       const sats = decoded.sats;
 
-      if (!addressSymbol)
+      if (addressSymbol == 0)
         throw new Error('Utxo exists but has no address accociated with it');
 
       const address = await this.getAddressBySymbol(addressSymbol);
