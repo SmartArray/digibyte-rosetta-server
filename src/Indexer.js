@@ -378,7 +378,7 @@ class Indexer {
     const ops = this.dbBatches['address-sym'];
     const operations = this.db['address-sym'].processList(ops);
 
-    list.push(...operations);
+    for (let op of operations) list.push(op);
     ops.length = 0;
   }
 
