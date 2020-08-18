@@ -4,9 +4,9 @@ const JSBinType = require('js-binary').Type;
 
 const syncBlockCache = require('./syncBlockCache');
 
-const BLOCK_BATCH_SIZE = 200;
-const TX_BATCH_SIZE = 20000;
-const ADDRESS_BATCH_SIZE = 20000;
+const BLOCK_BATCH_SIZE = 100;
+const TX_BATCH_SIZE = 10000;
+const ADDRESS_BATCH_SIZE = 2000;
 const SATOSHI = 100000000;
 
 const SymbolSchema = new JSBinType({
@@ -302,7 +302,7 @@ class Indexer {
       this.dbBatches['tx-sym'].length >= TX_BATCH_SIZE ||
       this.dbBatches['address-sym'].length >= ADDRESS_BATCH_SIZE
     );
-    
+
     const timeCriterion = false; // ToDo
 
     if (batchCriterion || timeCriterion) {
