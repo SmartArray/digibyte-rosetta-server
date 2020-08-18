@@ -4,9 +4,9 @@ const JSBinType = require('js-binary').Type;
 
 const syncBlockCache = require('./syncBlockCache');
 
-const BLOCK_BATCH_SIZE = 100;
-const TX_BATCH_SIZE = 10000;
-const ADDRESS_BATCH_SIZE = 2000;
+const BLOCK_BATCH_SIZE = 200;
+const TX_BATCH_SIZE = 20000;
+const ADDRESS_BATCH_SIZE = 20000;
 const SATOSHI = 100000000;
 
 const SymbolSchema = new JSBinType({
@@ -207,6 +207,8 @@ class Indexer {
     if (!blockData) {
       throw new Error(`CRITICAL: No data found in SyncBlockCache for ${blockHash}`);
     }
+
+    console.log('Processing', blockData.height);
 
     this.workQueue.push(blockData);
     this.worker();
