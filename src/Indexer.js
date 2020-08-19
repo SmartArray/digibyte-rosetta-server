@@ -406,7 +406,7 @@ class Indexer {
           if (!coinbase) throw new Error(`Invalid input @ blockSymbol = ${block.height}`);
           continue;
         }
-        
+
         console.log(`  Revalidating ${txid}:${vout}`);
 
         const pair = await this.utxoExists(txid, vout);
@@ -486,6 +486,9 @@ class Indexer {
           console.error(tx.txid, `output-${output.n}`, e);
         }
       } 
+
+      // Delete block symbol
+      await this.db['tx-sym'].del(hexToBin(tx.txid));
     }
 
     // Remove the block symbol
