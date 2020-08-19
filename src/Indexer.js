@@ -291,6 +291,11 @@ class Indexer {
           this.bestBlockHash = previousBlockHash;
           this.safeLastBlockSymbol = this.lastBlockSymbol;
 
+          // Save metadata
+          const batches = [];
+          await this.processMetadata(batches);
+          await this.writeBatches(batches);
+
         } else {
           /**
            * Block will be added to the utxo database
@@ -378,9 +383,6 @@ class Indexer {
   async removeBlock(block) {
     const hash = block.hash;
 
-    // Remove the block symbol
-    await this.db['block-sym'].del(hexToBin(hash));
-
     // Recover last tx symbol, that was used before the block appeared.
     let minTxSymbol = Number.MAX_VALUE;
 
@@ -397,15 +399,15 @@ class Indexer {
       minTxSymbol = Math.min(minTxSymbol, txSym);
 
       // 2) Loop through inputs and re-validate the utxos
-      for (const input of tx.vin) {
+      for (let input of tx.vin) {
         const { txid, vout, coinbase } = input;
-
-        console.log(`  Revalidating ${txid}:${vout}`);
 
         if (!txid || vout == null) {
           if (!coinbase) throw new Error(`Invalid input @ blockSymbol = ${block.height}`);
           continue;
         }
+        
+        console.log(`  Revalidating ${txid}:${vout}`);
 
         const pair = await this.utxoExists(txid, vout);
         if (pair == null) {
@@ -420,10 +422,8 @@ class Indexer {
           decoded.spentOnBlock = null;
           decoded.spentInTx = null;
 
-          const key = this.serializeUtxoKey(txid, vout);
           const value = UtxoValueSchema.encode(decoded);
-
-          await this.db.utxo.put(key, value);
+          await this.db.utxo.put(pair.key, value);
 
         } catch (e) {
           console.error(pair)
@@ -487,6 +487,9 @@ class Indexer {
         }
       } 
     }
+
+    // Remove the block symbol
+    await this.db['block-sym'].del(hexToBin(hash));
 
     // Recover last tx symbol
     if (minTxSymbol != Number.MAX_VALUE) {
