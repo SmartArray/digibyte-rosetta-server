@@ -20,20 +20,26 @@
  */
 
 const RosettaSDK = require('rosetta-node-sdk');
+
 const {
   Address,
   PublicKey,
   Networks,
+  Transaction,
 } = require('bitcore-lib');
 
-const rpc = require('../rpc');
 const Config = require('../../config');
-const Errors = require('../../config/errors');
 const CustomNetworks = require('../CustomNetworks');
+const Network = CustomNetworks[Config.network];
+
+const rpc = require('../rpc');
+const Errors = require('../../config/errors');
+const DigiByteIndexer = require('../digibyteIndexer');
 
 const Types = RosettaSDK.Client;
 
-const Network = CustomNetworks[Config.network];
+Networks.add(Network);
+Networks.defaultNetwork = Network.name;
 
 /* Construction API */
 
@@ -46,7 +52,63 @@ const Network = CustomNetworks[Config.network];
 * */
 const constructionMetadata = async (params) => {
   const { constructionMetadataRequest } = params;
-  return {};
+  const { options } = constructionMetadataRequest;
+
+  if (!options || !Array.isArray(options.required_balances) ||
+    options.required_balances.length == 0) throw Errors.EXPECTED_REQUIRED_ACCOUNTS;
+
+  // ToDo: require change address?
+
+  const relevantInputs = [];
+  let change = 0;
+
+  for (let requiredBalance of options.required_balances) {
+    const { account, amount } = requiredBalance;
+
+    if (amount < 0) {
+      // Get the utxos accociated with that address.
+      const outputs = await DigiByteIndexer.getAccountOutputs(account);
+
+      /**
+       * Collect as many outputs as we need to fulfill
+       * the requested balance operation.
+       */
+      let missing = -amount;
+
+      for (let output of outputs) {
+        if (missing >= 0) continue;
+        missing += output.sats;
+
+        /**
+         * Add this utxo to the relevant ones.
+         */
+        relevantInputs.push({
+          txid: output.txid,
+          vout: output.vout,
+        });
+      }
+
+      // Can not fulfill the request.
+      if (missing < 0) {
+        throw Errors.INSUFFICIENT_BALANCE.addDetails({
+          for_account: account,
+        });
+      }
+
+      // Utxos gave too many satoshis. Add the difference to the change.
+      if (missing > 0) {
+        change += missing;
+      }
+    }
+  }
+
+  // Return no metadata to work with
+  return Types.ConstructionMetadataResponse.constructFromObject({
+    metadata: {
+      relevant_inputs: relevantInputs,
+      change,
+    },
+  });
 };
 
 /**
@@ -69,7 +131,7 @@ const constructionSubmit = async (params) => {
 * returns ConstructionCombineResponse
 * */
 const constructionCombine = async (params) => {
-  const { constructionSubmitRequest } = params;
+  const { constructionCombineRequest } = params;
   return {};
 };
 
@@ -81,18 +143,22 @@ const constructionCombine = async (params) => {
 * returns ConstructionDeriveResponse
 * */
 const constructionDerive = async (params) => {
-  const { constructionSubmitRequest } = params;
-  const { public_key, network_identifier } = constructionSubmitRequest;
+  const { constructionDeriveRequest } = params;
+  const { public_key, network_identifier } = constructionDeriveRequest;
 
-  if (public_key.curve_type != 'secp256k1') return Errors.INVALID_CURVE_TYPE;
+  if (public_key.curve_type != 'secp256k1') {
+    return Errors.INVALID_CURVE_TYPE;
+  }
 
   try {
     const pubKey = new PublicKey(public_key.hex_bytes);
-    const address = Address.fromPublicKey(pubKey, Network);
+    const address = Address.fromPublicKey(pubKey); // , undefined, 'witnesspubkeyhash');
     return new Types.ConstructionDeriveResponse(address.toString());
+
   } catch (e) {
+    console.error(e);
     return Errors.UNABLE_TO_DERIVE_ADDRESS
-      .addDetails(e.message);
+      .addDetails({ reason: e.message });
   }
 };
 
@@ -104,7 +170,7 @@ const constructionDerive = async (params) => {
 * returns TransactionIdentifierResponse
 * */
 const constructionHash = async (params) => {
-  const { constructionSubmitRequest } = params;
+  const { constructionHashRequest } = params;
   return {};
 };
 
@@ -116,7 +182,7 @@ const constructionHash = async (params) => {
 * returns ConstructionParseResponse
 * */
 const constructionParse = async (params) => {
-  const { constructionSubmitRequest } = params;
+  const { constructionParseRequest } = params;
   return {};
 };
 
@@ -128,7 +194,17 @@ const constructionParse = async (params) => {
 * returns ConstructionPayloadsResponse
 * */
 const constructionPayloads = async (params) => {
-  const { constructionSubmitRequest } = params;
+  const { constructionPayloadsRequest } = params;
+  const { metadata } = constructionPayloadsRequest;
+
+  if (!metadata || !Array.isArray(metadata.relevant_inputs) ||
+    metadata.relevant_inputs.length == 0) throw Errors.EXPECTED_RELEVANT_INPUTS;
+
+  const transaction = new Transaction()
+    .from(metadata.relevant_inputs);
+
+
+
   return {};
 };
 
@@ -140,8 +216,40 @@ const constructionPayloads = async (params) => {
 * returns ConstructionPreprocessResponse
 * */
 const constructionPreprocess = async (params) => {
-  const { constructionSubmitRequest } = params;
-  return {};
+  const { constructionPreprocessRequest } = params;
+  const { operations } = constructionPreprocessRequest;
+
+  const requiredAmountForAccount = {};
+  const requiredBalances = [];
+
+  for (let operation of operations) {
+    const { address } = operation.account_identifier;
+    const amount = parseInt(operation.amount.value);
+
+    // Skip if receiving address.
+    if (amount >= 0) continue;
+
+    const positiveAmount = -amount;
+
+    /**
+     * Group the required amount to the relevant account.
+     */
+    requiredAmountForAccount[address] = requiredAmountForAccount[address] || { sats: 0 };
+    requiredAmountForAccount[address].sats += positiveAmount;
+  }
+
+  for (let account of Object.keys(requiredAmountForAccount)) {
+    requiredBalances.push({
+      account, 
+      amount: requiredAmountForAccount[account]
+    });
+  }
+
+  return Types.ConstructionPreprocessResponse().constructFromObject({
+    options: {
+      required_balances: requiredBalances,
+    },
+  })
 };
 
 module.exports = {

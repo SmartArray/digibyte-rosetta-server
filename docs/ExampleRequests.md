@@ -28,15 +28,21 @@ curl -X POST http://localhost:8080/mempool/transaction -H 'Content-Type: applica
 
 ### Get Account Balance
 ```bash
-curl -X POST -H 'application/json' -d '{ "network_identifier": { "blockchain": "dgb", "network": "mainnet" }, "account_identifier": { "address": "DBUdfo4FKrdcmmEc3i6twu5hdSojKx4LxY" }}' http://localhost/account/balance
+curl -X POST -H 'Content-Type: application/json' -d '{ "network_identifier": { "blockchain": "dgb", "network": "mainnet" }, "account_identifier": { "address": "DBUdfo4FKrdcmmEc3i6twu5hdSojKx4LxY" }}' http://localhost:8080/account/balance
 ```
 
 ### Get Account Balance at a specific block height
 ```bash
-curl -X POST -H 'application/json' -d '{ "network_identifier": { "blockchain": "dgb", "network": "mainnet" }, "account_identifier": { "address": "DBUdfo4FKrdcmmEc3i6twu5hdSojKx4LxY" }, "block_identifier": {"index": "100000"}}' http://localhost/account/balance
+curl -X POST -H 'Content-Type: application/json' -d '{ "network_identifier": { "blockchain": "dgb", "network": "mainnet" }, "account_identifier": { "address": "DBUdfo4FKrdcmmEc3i6twu5hdSojKx4LxY" }, "block_identifier": {"index": "100000"}}' http://localhost:8080/account/balance
 ```
 
 ### Get Account Balance at a specific block hash
 ```bash
-curl -X POST -H 'application/json' -d '{ "network_identifier": { "blockchain": "dgb", "network": "mainnet" }, "account_identifier": { "address": "DBUdfo4FKrdcmmEc3i6twu5hdSojKx4LxY" }, "block_identifier": {"hash": "0be8462fa449f92486972d529a9cf48c49a81c78616e7ab5959d89b313550a60"}}' http://localhost/account/balance
+curl -X POST -H 'Content-Type: application/json' -d '{ "network_identifier": { "blockchain": "dgb", "network": "mainnet" }, "account_identifier": { "address": "DBUdfo4FKrdcmmEc3i6twu5hdSojKx4LxY" }, "block_identifier": {"hash": "0be8462fa449f92486972d529a9cf48c49a81c78616e7ab5959d89b313550a60"}}' http://localhost:8080/account/balance
+```
+
+### Derive Address from Public Key
+
+```bash
+curl -X POST -H 'Content-Type: application/json' -d '{ "network_identifier": { "blockchain": "dgb", "network": "mainnet" }, "public_key": { "hex_bytes": "022CE71A795A40C1FBBED4F7868BD57FDB0D6B1CD8156C7721050A851DE7C60F9E", "curve_type": "secp256k1" } }' http://localhost:8080/construction/derive
 ```

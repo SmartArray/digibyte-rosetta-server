@@ -18,6 +18,10 @@ const errors = {
 
   INVALID_CURVE_TYPE: new Types.Error(8, 'Curve type must be secp256k1', false),
   UNABLE_TO_DERIVE_ADDRESS: new Types.Error(9, 'Unable to derive address from public key', false),
+
+  INSUFFICIENT_BALANCE: new Types.Error(10, 'Insufficient balance', false),
+  EXPECTED_REQUIRED_ACCOUNTS: new Types.Error(11, 'No relevant accounts with their required amounts passed to this endpoint.', false),
+  EXPECTED_RELEVANT_INPUTS: new Types.Error(12, 'No relevant inputs were passed to this endpoint', false),
 };
 
 module.exports = errors;

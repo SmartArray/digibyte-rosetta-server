@@ -31,7 +31,7 @@ const operationTypesList = [
   LABEL_COINBASE,
 ];
 
-const historicalBalanceLookup = false;
+const historicalBalanceLookup = true;
 
 module.exports = {
   currency,
@@ -51,6 +51,9 @@ module.exports = {
     errors.UNABLE_TO_RETRIEVE_BALANCE,
     errors.INVALID_CURVE_TYPE,
     errors.UNABLE_TO_DERIVE_ADDRESS,
+    errors.INSUFFICIENT_BALANCE,
+    errors.EXPECTED_REQUIRED_ACCOUNTS,
+    errors.EXPECTED_RELEVANT_INPUTS,
   ],
 
   operationTypes: {

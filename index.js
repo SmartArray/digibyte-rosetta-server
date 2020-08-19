@@ -21,7 +21,7 @@
 
 const RosettaSDK = require('rosetta-node-sdk');
 
-const config = require('./config');
+const Config = require('./config');
 const ServiceHandlers = require('./src/services');
 const DigiByteSyncer = require('./src/digibyteSyncer');
 const DigiByteIndexer = require('./src/digibyteIndexer');
@@ -34,24 +34,24 @@ console.log(`
 |____/|_|_  |_|_____|_  |_| |___|  |__|__|___|___|___|_| |_| |__,|  |_|___|___|___|___|
         |___|       |___|                                                              
 
-             Version                  ${config.version}
-             Rosetta Version          ${config.rosettaVersion}
-             DigiByte Node Version    ${config.digibyteVersion}
-             Networks                 ${JSON.stringify(config.serverConfig.networkIdentifiers)}
-             Port                     ${config.port}
+             Version                  ${Config.version}
+             Rosetta Version          ${Config.rosettaVersion}
+             DigiByte Node Version    ${Config.digibyteVersion}
+             Networks                 ${JSON.stringify(Config.serverConfig.networkIdentifiers)}
+             Port                     ${Config.port}
 `);
 
 /* Create a server configuration */
 const Server = new RosettaSDK.Server({
-  URL_PORT: config.port,
+  URL_PORT: Config.port,
 });
 
 const historicalBalanceLookup = false;
 
 const asserter = RosettaSDK.Asserter.NewServer(
-  config.serverConfig.operationTypesList,
+  Config.serverConfig.operationTypesList,
   historicalBalanceLookup,
-  config.serverConfig.networkIdentifiers,
+  Config.serverConfig.networkIdentifiers,
 );
 
 // Register global asserter
@@ -158,7 +158,19 @@ const init = async () => {
   await startSyncer();
 };
 
-init().catch((e) => {
-  console.error(`Could not start sync: ${e.message}`);
-  console.error(e);
-});
+const initOffline = async () => {
+  // Start the REST Server
+  await startServer();
+};
+
+if (Config.offline) {
+  initOffline().catch((e) => {
+    console.error(`Could not start node in offline mode: ${e.message}`);
+    console.error(e);
+  });
+} else {
+  init().catch((e) => {
+    console.error(`Could not start node in online mode: ${e.message}`);
+    console.error(e);
+  });
+}

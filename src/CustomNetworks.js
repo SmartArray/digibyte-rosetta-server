@@ -1,9 +1,9 @@
 /* DigiByte Networks Params for Bitcore-lib */
 
 const livenet = {
-  name: 'livenet',
-  alias: 'mainnet',
-  prefix: 'dgb',
+  name: 'dgb_livenet',
+  alias: 'dgb_mainnet',
+  bech32prefix: 'dgb',
   pubkeyhash: 0x1e,
   privatekey: 0x80,
   privatekeyOld: 0x9e,
@@ -21,9 +21,9 @@ const livenet = {
 };
 
 const testnet = {
-  name: 'testnet',
-  alias: 'testnet',
-  prefix: 'dgbt',
+  name: 'dgb_testnet',
+  alias: 'dgb_testnet',
+  bech32prefix: 'dgbt',
   pubkeyhash: 0x7e,
   privatekey: 0xfe,
   scripthash: 0x8c,
@@ -32,9 +32,9 @@ const testnet = {
 };
 
 const regtest = {
-  name: 'regtest',
-  alias: 'regtest',
-  prefix: 'dgbrt',
+  name: 'dgb_regtest',
+  alias: 'dgb_regtest',
+  bech32prefix: 'dgbrt',
   pubkeyhash: 0x7e,
   privatekey: 0xfe,
   scripthash: 0x8c,

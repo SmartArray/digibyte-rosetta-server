@@ -32,6 +32,7 @@ const config = {
   digibyteVersion: process.env.DGB_VERSION,
   port: process.env.PORT || DEFAULT_LISTENING_PORT,
   host: process.env.HOST || DEFAULT_LISTENING_HOST,
+  offline: process.env.OFFLINE_MODE || false,
 
   data: {
     path: process.env.DATA_PATH || DEFAULT_DATA_PATH,
@@ -52,7 +53,7 @@ const config = {
 
 config.syncer = {
   syncerSecret,
-  
+
   defaultHeaders: {
     'syncer-secret': syncerSecret,
   },
