@@ -29,7 +29,6 @@ const Config = require('../../config');
 const Errors = require('../../config/errors');
 
 const SyncBlockCache = require('../syncBlockCache');
-const DigiByteSyncer = require('../digibyteSyncer');
 const DigiByteIndexer = require('../digibyteIndexer');
 
 /* Data API: Block */
