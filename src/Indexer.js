@@ -395,7 +395,12 @@ class Indexer {
        */ 
 
       // 1) Get the symbol
-      const txSym = await this.db['tx-sym'].get(hexToBin(tx.txid));
+      const txSym = await this.getTxSymbol(tx.txid);
+      if (txSym == null) {
+        console.log(`Tx Symbol ${txSym} did not exist. Skipping removal.`);
+        continue;
+      }
+
       minTxSymbol = Math.min(minTxSymbol, txSym);
 
       // 2) Loop through inputs and re-validate the utxos
