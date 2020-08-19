@@ -111,6 +111,16 @@ class DatabaseWrapper {
     return await this.dbInstance.get(prefixedKey);
   }
 
+  async del(key) {
+    const prefixedKey = this._prefixKey(key);
+    return await this.dbInstance.del(prefixedKey);
+  }
+
+  async put(key, value) {
+    const prefixedKey = this._prefixKey(key);
+    return await this.dbInstance.put(prefixedKey, value);
+  }
+
   process(operation) {
     operation.key = this._prefixKey(operation.key);
     return operation;
@@ -200,15 +210,28 @@ class Indexer {
   }
 
   handleBlock(block, removed = false) {
-    if (removed) { console.log('REMOVE', block.index, block.hash); return; }
-    const blockHash = block.block_identifier.hash;
+    let blockHash;
+
+    if (removed) {
+      // Block removed
+      const { hash, index } = block;
+      console.log(`Removing block ${hash} (${index})...`);
+      blockHash = hash;
+    } else {
+      // Block added
+      blockHash = block.block_identifier.hash;
+    }
+
     const blockData = syncBlockCache.get(blockHash);
 
     if (!blockData) {
       throw new Error(`CRITICAL: No data found in SyncBlockCache for ${blockHash}`);
     }
 
-    console.log('Processing', blockData.height);
+    /**
+     * Mark the black as "to be removed"
+     */
+    blockData.remove = removed;
 
     this.workQueue.push(blockData);
     this.worker();
@@ -232,17 +255,54 @@ class Indexer {
           } else {
             throw new Error('CRITICAL: No Genesis Block was passed to Indexer.');
           }
+        }
+
+        const blockExists = await this.getBlockSymbol(block.hash);
+        const previousBlockHash = block.previousblockhash;
+        const previousBlockExists = await this.getBlockSymbol(previousBlockHash);
+
+        if (block.remove) {
+          /**
+           * Block will me removed from the utxo database (REORG)
+           */
+          if (blockExists == null) {
+            throw new Error(`Cannot remove block with hash ${block.hash} `
+              + `because the symbol does not exist`);
+          }
+
+          // Exit if the previous block does not exist.
+          // This should never happen, but we need the block symbol
+          // in order to reset the lastBlockSymbol.
+          if (previousBlockExists == null && block.height != 0) {
+            throw new Error(`Cannot remove block with hash ${block.hash} `
+              + `because the symbol of the previous block hash ${previousBlockHash} `
+              + `does not exist`);            
+          }
+
+          // Flush evereything to disk before we remove the 
+          // affected data.
+          await this.processBatches();
+
+          // Remove
+          await this.removeBlock(block);
+
+          // Update the internal state
+          this.lastBlockSymbol = previousBlockExists;
+          this.bestBlockHash = previousBlockHash;
+          this.safeLastBlockSymbol = this.lastBlockSymbol;
+
         } else {
+          /**
+           * Block will be added to the utxo database
+           */
+
           // Skip this block if it already exists in the database
-          const blockExists = await this.getBlockSymbol(block.hash);
           if (blockExists != null) {
             console.log(`Block ${block.hash} exists (sym = ${blockExists})`);
             continue;
           }
 
           // Check if the previous block was already processed
-          const previousBlockHash = block.previousblockhash;
-          const previousBlockExists = await this.getBlockSymbol(previousBlockHash);
           if (previousBlockExists == null && block.height != 0) {
             throw new Error(`Previous block ${previousBlockHash} does not exist`);
           }
@@ -251,10 +311,8 @@ class Indexer {
         // Update the database
         this.bestBlockHash = block.hash;
         await this.saveBlock(block);
-
-        // if (block.height % 100 == 0 && block.height != 0)
-        //   console.log(`Synched blocks ${block.height - 100}-${block.height}`);
       }
+
     } catch (e) {
       console.error('worker', e);
       process.exit(1);
@@ -309,6 +367,130 @@ class Indexer {
 
     if (batchCriterion || timeCriterion) {
       await this.processBatches();
+    }
+  }
+
+  /**
+   * removeBlock removes the utxos created in a block,
+   * and revalidates spent-outputs.
+   * Technically, it uses direct writes instead of batches.
+   */
+  async removeBlock(block) {
+    const hash = block.hash;
+
+    // Remove the block symbol
+    await this.db['block-sym'].del(hexToBin(hash));
+
+    // Recover last tx symbol, that was used before the block appeared.
+    let minTxSymbol = Number.MAX_VALUE;
+
+    // Loop through all transactions and remove the data
+    const transactions = block.tx;
+    for (const tx of transactions) {
+      /**
+       * In the following, we assume that all the database
+       * entities exist.
+       */ 
+
+      // 1) Get the symbol
+      const txSym = await this.db['tx-sym'].get(hexToBin(tx.txid));
+      minTxSymbol = Math.min(minTxSymbol, txSym);
+
+      // 2) Loop through inputs and re-validate the utxos
+      for (const input of tx.vin) {
+        const { txid, vout, coinbase } = input;
+
+        console.log(`  Revalidating ${txid}:${vout}`);
+
+        if (!txid || vout == null) {
+          if (!coinbase) throw new Error(`Invalid input @ blockSymbol = ${block.height}`);
+          continue;
+        }
+
+        const pair = await this.utxoExists(txid, vout);
+        if (pair == null) {
+          throw new Error(`Blockchain error. Utxo ${txid}:${vout} does not exist.`);
+        }
+
+        // 2.1) Re-validate utxo.
+        // Spent utxos must be set to unspent.
+        // This will set the keys `spentOnBlock`, `spentInTx` symbols to null.
+        try {
+          const decoded = UtxoValueSchema.decode(pair.value);
+          decoded.spentOnBlock = null;
+          decoded.spentInTx = null;
+
+          const key = this.serializeUtxoKey(txid, vout);
+          const value = UtxoValueSchema.encode(decoded);
+
+          await this.db.utxo.put(key, value);
+
+        } catch (e) {
+          console.error(pair)
+          console.error(pair.value)
+          console.error(e);
+        }
+      }
+
+      // 3) Remove newly created outputs
+      for (const output of tx.vout) {
+        try {
+          /**
+           * 3.1) Remove the utxo
+           */
+
+          // Get the address of the output
+          const address = await this.getAddressSymbol(output);
+          const addressSymbol = address.value;
+
+          // Delete the utxo
+          console.log(`  Deleting ${tx.txid}:${output.n}`);
+          const key = this.serializeUtxoKey(txSym, output.n);
+          await this.db.utxo.del(key);
+
+          if (!address || !address.key) {
+            continue;
+          }
+
+          /**
+           * 3.2) Delete the utxo from the address utxo list
+           */
+
+          // Get the utxo list
+          console.log(`  Deleting ${tx.txid}:${output.n} from ${address.key}`);
+          const serializedUtxoList = await this.db['address-utxos'].get(addressSymbol)
+            .catch(() => EMPTY_UTXO_LIST);
+
+          // Decode the existing structure
+          const deserializedUtxoList = AddressValueSchema.decode(serializedUtxoList);   
+
+          // Remove the affected utxo
+          for (let i = 0; i < deserializedUtxoList.txSymbol.length; ++i) {
+            if (deserializedUtxoList.txSymbol == txSym &&
+                deserializedUtxoList.vout == output.n) {
+              deserializedUtxoList.txSymbol.splice(i, 1);
+              deserializedUtxoList.vout.splice(i, 1);
+            }
+          }
+
+          // Save the list again
+          await this.db['address-utxos']
+            .put(addressSymbol, AddressValueSchema.encode(deserializedUtxoList));
+
+          /**
+           * 3.3) We do not remove the address symbol
+           *   because it will most likely appear in future.
+           */
+
+        } catch (e) {
+          console.error(tx.txid, `output-${output.n}`, e);
+        }
+      } 
+    }
+
+    // Recover last tx symbol
+    if (minTxSymbol != Number.MAX_VALUE) {
+      this.lastTxSymbol = minTxSymbol - 1;
     }
   }
 
@@ -775,6 +957,38 @@ class Indexer {
     }
   }
 
+  async getAccountUtxos(address) {
+    const result = [];
+
+    try {
+      const addressSymbol = await this.getAddressSymbolByAddress(serializeAddress(address));
+      const utxos = await this.db['address-utxos'].get(addressSymbol);
+      const utxoList = AddressValueSchema.decode(utxos);
+
+      for (let i = 0; i < utxoList.txSymbol.length; ++i) {
+        const txid = utxoList.txSymbol[i];
+        const vout = utxoList.vout[i];
+
+        const utxo = await this.utxoExistsBySymbol(txid, vout);
+        if (!utxo) {
+          throw new Error(`Could not find utxo ${txid}:${vout}`);
+        }
+
+        const decodedUtxo = UtxoValueSchema.decode(utxo.value);
+        result.push({
+          txid,
+          vout,
+          sats: decodedUtxo.sats,
+        });
+      }
+
+    } catch (e) {
+      console.error(e);
+    }
+
+    return result;
+  }
+
   async getAccountBalance(address, atBlock = null) {
     try {
       let blockSymbol;
@@ -802,7 +1016,8 @@ class Indexer {
         blockHash = this.bestBlockHash;
       }
 
-      const utxos = await this.db['address-utxos'].get(serializeAddress(address));
+      const addressSymbol = await this.getAddressSymbolByAddress(serializeAddress(address));
+      const utxos = await this.db['address-utxos'].get(addressSymbol);
       const utxoList = AddressValueSchema.decode(utxos);
       let balance = 0;
 
