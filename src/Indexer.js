@@ -72,7 +72,7 @@ const returnSymbol = (symbol) => {
 
 const hexToBin = (hexString) => {
   if (typeof hexString !== 'string' || hexString.length == 0) {
-    throw new Error('No valid string');
+    throw new Error(`No valid string: ${hexString}`);
   }
 
   const ret = Buffer.from(hexString, 'hex');
@@ -925,7 +925,7 @@ class Indexer {
 
   async getBlockSymbol(hash) {
     if (!hash) return null;
-
+    
     // Return symbol from the last seen cache.
     // console.log(hash);
     const isLastSeen = this.lastSeenBlockHashes[hash];

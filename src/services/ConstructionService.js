@@ -195,7 +195,7 @@ const constructionParse = async (params) => {
 * */
 const constructionPayloads = async (params) => {
   const { constructionPayloadsRequest } = params;
-  const { metadata } = constructionPayloadsRequest;
+  const { operations, metadata } = constructionPayloadsRequest;
 
   if (!metadata || !Array.isArray(metadata.relevant_inputs) ||
     metadata.relevant_inputs.length == 0) throw Errors.EXPECTED_RELEVANT_INPUTS;
@@ -203,7 +203,9 @@ const constructionPayloads = async (params) => {
   const transaction = new Transaction()
     .from(metadata.relevant_inputs);
 
-
+  for (let operation of operations) {
+    transaction.to(operation.account.address, operation.amount.value);    
+  }
 
   return {};
 };
