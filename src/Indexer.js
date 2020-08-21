@@ -924,6 +924,8 @@ class Indexer {
   }
 
   async getBlockSymbol(hash) {
+    if (hash == '') return null;
+    
     // Return symbol from the last seen cache.
     // console.log(hash);
     const isLastSeen = this.lastSeenBlockHashes[hash];
