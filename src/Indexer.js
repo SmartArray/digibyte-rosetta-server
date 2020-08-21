@@ -480,7 +480,10 @@ class Indexer {
 
           // Save the list again
           await this.db['address-utxos']
-            .put(addressSymbol, AddressValueSchema.encode(deserializedUtxoList));
+            .put(
+              encodeSymbol(addressSymbol),
+              AddressValueSchema.encode(deserializedUtxoList)
+            );
 
           /**
            * 3.3) We do not remove the address symbol
@@ -787,7 +790,7 @@ class Indexer {
     if (lastSeenAddress) {
       return {
         key: addressString,
-        value: encodeSymbol(lastSeenAddress),
+        value: lastSeenAddress,
       };
     }
 
@@ -812,7 +815,7 @@ class Indexer {
 
     const ret = {
       key: addressString,
-      value: symbolData,
+      value: symbol,
     };
 
     return ret;
@@ -925,7 +928,7 @@ class Indexer {
 
   async getBlockSymbol(hash) {
     if (!hash) return null;
-    
+
     // Return symbol from the last seen cache.
     // console.log(hash);
     const isLastSeen = this.lastSeenBlockHashes[hash];
