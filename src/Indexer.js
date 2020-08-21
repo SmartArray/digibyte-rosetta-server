@@ -787,7 +787,7 @@ class Indexer {
     if (lastSeenAddress) {
       return {
         key: addressString,
-        value: lastSeenAddress,
+        value: encodeSymbol(lastSeenAddress),
       };
     }
 
@@ -804,7 +804,7 @@ class Indexer {
       this.dbBatches['address-sym'].push({
         type: 'put',
         key: serializedAddress,
-        value: encodeSymbol(symbol),
+        value: encodeSymbol(symbol), // encodedSymbol
       });
 
       this.lastSeenAddresses[addressString] = symbol;
@@ -812,7 +812,7 @@ class Indexer {
 
     const ret = {
       key: addressString,
-      value: symbol,
+      value: symbolData,
     };
 
     return ret;
@@ -924,8 +924,8 @@ class Indexer {
   }
 
   async getBlockSymbol(hash) {
-    if (hash == '') return null;
-    
+    if (!hash) return null;
+
     // Return symbol from the last seen cache.
     // console.log(hash);
     const isLastSeen = this.lastSeenBlockHashes[hash];
