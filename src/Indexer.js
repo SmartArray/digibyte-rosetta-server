@@ -524,7 +524,7 @@ class Indexer {
       // Serialize the address and get the existing address utxos
       const addressSymbol = await this.getAddressSymbolByAddress(address);
 
-      const serializedUtxoList = await this.db['address-utxos'].get(addressSymbol)
+      const serializedUtxoList = await this.db['address-utxos'].get(addressSymbol.value)
         .catch(() => EMPTY_UTXO_LIST);
 
       // Decode the existing structure
@@ -973,7 +973,7 @@ class Indexer {
 
     try {
       const addressSymbol = await this.getAddressSymbolByAddress(serializeAddress(address));
-      const utxos = await this.db['address-utxos'].get(addressSymbol);
+      const utxos = await this.db['address-utxos'].get(addressSymbol.value);
       const utxoList = AddressValueSchema.decode(utxos);
 
       for (let i = 0; i < utxoList.txSymbol.length; ++i) {
@@ -1028,7 +1028,7 @@ class Indexer {
       }
 
       const addressSymbol = await this.getAddressSymbolByAddress(serializeAddress(address));
-      const utxos = await this.db['address-utxos'].get(addressSymbol);
+      const utxos = await this.db['address-utxos'].get(addressSymbol.value);
       const utxoList = AddressValueSchema.decode(utxos);
       let balance = 0;
 
