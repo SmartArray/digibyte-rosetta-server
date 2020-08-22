@@ -46,11 +46,9 @@ const Server = new RosettaSDK.Server({
   URL_PORT: Config.port,
 });
 
-const historicalBalanceLookup = false;
-
 const asserter = RosettaSDK.Asserter.NewServer(
   Config.serverConfig.operationTypesList,
-  historicalBalanceLookup,
+  Config.serverConfig.historicalBalanceLookup,
   Config.serverConfig.networkIdentifiers,
 );
 
