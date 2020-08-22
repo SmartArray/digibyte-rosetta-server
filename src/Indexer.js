@@ -463,7 +463,7 @@ class Indexer {
 
           // Get the utxo list
           console.log(`  Deleting ${tx.txid}:${output.n} from ${address.key}`);
-          const serializedUtxoList = await this.db['address-utxos'].get(addressSymbol)
+          const serializedUtxoList = await this.db['address-utxos'].get(encodeSymbol(addressSymbol))
             .catch(() => EMPTY_UTXO_LIST);
 
           // Decode the existing structure
@@ -491,11 +491,11 @@ class Indexer {
            */
 
         } catch (e) {
-          console.error(tx.txid, `output-${output.n}`, e);
+          console.error('ERROR', tx.txid, `output-${output.n}`, e);
         }
       } 
 
-      // Delete block symbol
+      // Delete tx symbol
       await this.db['tx-sym'].del(hexToBin(tx.txid));
     }
 
