@@ -52,7 +52,7 @@ const VALID_PREFIXES = [
 ];
 
 const convertToSatoshis = (value) => {
-  const ret = Math.floor(value * SATOSHI);
+  const ret = Math.round(value * SATOSHI); // ok because we want whole numbers
   return ret;
 };
 
@@ -525,9 +525,10 @@ class Indexer {
       const utxoList = this.lastAddressUtxos[address];
 
       // Serialize the address and get the existing address utxos
-      const addressSymbol = await this.getAddressSymbolByAddress(address);
+      const address = await this.getAddressSymbolByAddress(address);
+      const addressSymbol = address.value;
 
-      const serializedUtxoList = await this.db['address-utxos'].get(addressSymbol.value)
+      const serializedUtxoList = await this.db['address-utxos'].get(encodeSymbol(addressSymbol))
         .catch(() => EMPTY_UTXO_LIST);
 
       // Decode the existing structure
@@ -541,7 +542,7 @@ class Indexer {
       // Create database operation
       const operation = {
         type: 'put',
-        key: encodeSymbol(addressSymbol.value),
+        key: encodeSymbol(addressSymbol),
         value: AddressValueSchema.encode(deserializedUtxoList),
       };
 
