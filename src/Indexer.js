@@ -520,12 +520,12 @@ class Indexer {
   }
 
   async processBatchedUtxoLists(list) {
-    for (const address of Object.keys(this.lastAddressUtxos)) {
+    for (const addressString of Object.keys(this.lastAddressUtxos)) {
       // Get the recent address utxos
-      const utxoList = this.lastAddressUtxos[address];
+      const utxoList = this.lastAddressUtxos[addressString];
 
       // Serialize the address and get the existing address utxos
-      const address = await this.getAddressSymbolByAddress(address);
+      const address = await this.getAddressSymbolByAddress(addressString);
       const addressSymbol = address.value;
 
       const serializedUtxoList = await this.db['address-utxos'].get(encodeSymbol(addressSymbol))
@@ -537,7 +537,7 @@ class Indexer {
       // Concatenate existing utxos with new utxos
       deserializedUtxoList.txSymbol = deserializedUtxoList.txSymbol.concat(utxoList.txSymbol);
       deserializedUtxoList.vout = deserializedUtxoList.vout.concat(utxoList.vout);
-      deserializedUtxoList.address = serializeAddress(address);
+      deserializedUtxoList.address = serializeAddress(addressString);
 
       // Create database operation
       const operation = {
