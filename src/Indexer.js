@@ -470,7 +470,7 @@ class Indexer {
           const deserializedUtxoList = AddressValueSchema.decode(serializedUtxoList);   
 
           // Remove the affected utxo
-          for (let i = 0; i < deserializedUtxoList.txSymbol.length; ++i) {
+          for (let i = deserializedUtxoList.txSymbol.length; i >= 0; --i) {
             if (deserializedUtxoList.txSymbol == txSym &&
                 deserializedUtxoList.vout == output.n) {
               deserializedUtxoList.txSymbol.splice(i, 1);
@@ -1047,6 +1047,7 @@ class Indexer {
         }
 
         const decodedUtxo = UtxoValueSchema.decode(utxo.value);
+        console.log(decodedUtxo);
 
         // Skip if utxo does not exist at specified block
         if (decodedUtxo.createdOnBlock > blockSymbol) {
