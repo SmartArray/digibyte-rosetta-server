@@ -1033,6 +1033,7 @@ class Indexer {
       }
 
       const addressSymbol = await this.getAddressSymbolByAddress(serializeAddress(address));
+			console.log({addressSymbol})
       const utxos = await this.db['address-utxos'].get(encodeSymbol(addressSymbol.value));
       const utxoList = AddressValueSchema.decode(utxos);
       let balance = 0;
