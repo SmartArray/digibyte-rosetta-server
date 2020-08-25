@@ -734,12 +734,12 @@ class Indexer {
     // Patch
     Object.assign(existing, {
       txSymbol: spentInTx,
-      txid,
+      txid: txid,
       n: vout,
       block: blockSymbol,
-      sats,
-      spentInTx,
-      spentOnBlock,
+      sats: sats,
+      spentInTx: spentInTx,
+      spentOnBlock: spentOnBlock,
       address: addressSymbol,
     });
 
@@ -766,14 +766,21 @@ class Indexer {
       try {
         const decoded = UtxoValueSchema.decode(pair.value);
         await this.invalidateUtxo(
+          // txid, vout, sats, addressSymbol, blockSymbol, spentInTx, spentOnBlock, serializedKey
           txid,
           vout,
+
+          // sats, addressSymbol and createdOnBlockSymbol
+          // will be used from existing utxo.
           decoded.sats, 
           decoded.address,
-          blockSymbol,
+          decoded.createdOnBlock, 
+
+          // UTXO got invalidated in this transaction (used as input)
+          // and in this block symbol.
           txSymbol,
-          decoded.spentOnBlock,
-          pair.key
+          blockSymbol, 
+          pair.key,
         );
       } catch (e) {
         console.error(pair)
