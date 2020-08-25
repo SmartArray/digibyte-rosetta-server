@@ -1,7 +1,9 @@
 const RosettaSDK = require('rosetta-node-sdk');
 const EventEmitter = require('events');
+const os = require('os');
 
 const networkIdentifier = require('../config/networkIdentifier');
+const cpuCount = os.cpus().length;
 
 class Syncer extends EventEmitter {
   constructor(config, indexer) {
@@ -10,6 +12,12 @@ class Syncer extends EventEmitter {
     const fetcher = new RosettaSDK.Fetcher({
       server: {
         ...config,
+      },
+
+      options: {
+        // Determines how many simultaneous requests (promises)
+        // are created using fetcher.
+        promisePoolSize: cpuCount,
       },
     });
 
