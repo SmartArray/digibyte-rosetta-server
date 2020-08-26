@@ -46,6 +46,7 @@ const PREFIX_ADDRESS_SYM = 'A';
 
 const VALID_PREFIXES = [
   PREFIX_BLOCK_SYM,
+  PREFIX_SYM_BLOCK,
   PREFIX_TX_SYM,
   PREFIX_UTXO,
   PREFIX_ADDRESS_UTXOS,
@@ -963,12 +964,12 @@ class Indexer {
   async getBlockHash(symbol) {
     let encodedSymbol;
 
-    if (typeof symbol != 'number') {
+    if (typeof symbol == 'number') {
       encodedSymbol = encodeSymbol(symbol);
     } else {
       encodedSymbol = symbol;
     }
-
+console.log(encodedSymbol, symbol)
     const encodedHash = await this.db['sym-block'].get(encodedSymbol)
       .catch(() => null);
 
@@ -1061,10 +1062,10 @@ class Indexer {
 
       if (typeof atBlock === 'number') {
         // lookup block hash
-        if (atBlock < this.lastBlockSymbol) {
+        if (atBlock > this.lastBlockSymbol) {
           throw new Error(
             `Block height ${atBlock} is not available.`
-            + ` Node to ${this.this.lastBlockSymbol}.`,
+            + ` Node to ${this.lastBlockSymbol}.`,
           );
         }
 
@@ -1086,7 +1087,7 @@ class Indexer {
       }
 
       // If no block was specified, use the most recent one
-      if (!blockSymbol) {
+      if (blockSymbol == null) {
         blockSymbol = this.lastBlockSymbol;
         blockHash = this.bestBlockHash;
       }
