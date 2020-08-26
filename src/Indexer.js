@@ -969,7 +969,7 @@ class Indexer {
     } else {
       encodedSymbol = symbol;
     }
-console.log(encodedSymbol, symbol)
+    
     const encodedHash = await this.db['sym-block'].get(encodedSymbol)
       .catch(() => null);
 
@@ -1143,7 +1143,6 @@ console.log(encodedSymbol, symbol)
       const { key, value, symbol } = utxo;
 
       const decoded = UtxoValueSchema.decode(value);
-      console.log(decoded);
 
       const addressSymbol = decoded.address;
       const sats = decoded.sats;
