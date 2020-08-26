@@ -1030,8 +1030,9 @@ class Indexer {
       } else if (typeof atBlock === 'string') {
         // lookup
         blockSymbol = await this.getBlockSymbol(atBlock);
-    console.log(atBlock, blockSymbol);
         if (blockSymbol == null) throw new Error(`No block found for hash ${atBlock}`);
+       
+        blockHash = atBlock;
       }
 
       // If no block was specified, use the most recent one
@@ -1041,7 +1042,6 @@ class Indexer {
       }
 
       const addressSymbol = await this.getAddressSymbolByAddress(serializeAddress(address));
-			console.log({addressSymbol})
       const utxos = await this.db['address-utxos'].get(encodeSymbol(addressSymbol.value));
       const utxoList = AddressValueSchema.decode(utxos);
       let balance = 0;
