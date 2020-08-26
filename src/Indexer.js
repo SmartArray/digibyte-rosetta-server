@@ -38,6 +38,7 @@ const EMPTY_UTXO_LIST = AddressValueSchema.encode({
 });
 
 const PREFIX_BLOCK_SYM = 'B';
+const PREFIX_SYM_BLOCK = 'b';
 const PREFIX_TX_SYM = 'T';
 const PREFIX_UTXO = 'U';
 const PREFIX_ADDRESS_UTXOS = 'X';
@@ -78,6 +79,14 @@ const hexToBin = (hexString) => {
   const ret = Buffer.from(hexString, 'hex');
   return ret;
 };
+
+const binToHex = (binary) => {
+  if (typeof binary !== 'object' || !Buffer.isBuffer(binary)) {
+    throw new Error(`No valid binary: ${binary}`);
+  }
+
+  return binary.toString('hex');
+}
 
 const serializeAddress = (address) => address;
 const deserializeAddress = (serializedAddress) => serializedAddress;
@@ -347,6 +356,7 @@ class Indexer {
       this.processBatchedAddressSymbols(batchedOperations),
       this.processBatchedUtxoLists(batchedOperations),
       this.processBatchedBlockSymbols(batchedOperations),
+      this.processBatchedBlockSymbolMappings(batchedOperations),
       this.processBatchedTxSymbols(batchedOperations),
       this.processBatchedUtxos(batchedOperations),
       this.processMetadata(batchedOperations),
@@ -552,6 +562,14 @@ class Indexer {
         this.db['address-utxos'].process(operation),
       );
     }
+  }
+
+  processBatchedBlockSymbolMappings(list) {
+    const ops = this.dbBatches['sym-block'];
+    const operations = this.db['sym-block'].processList(ops);
+
+    for (let op of operations) list.push(op);
+    ops.length = 0;
   }
 
   processBatchedUtxos(list) {
@@ -927,11 +945,34 @@ class Indexer {
   async batchBlockSymbol(hash, blockSymbol) {
     this.lastSeenBlockHashes[hash] = blockSymbol;
 
+    // block hash -> block symbol
     this.dbBatches['block-sym'].push({
       type: 'put',
       key: hexToBin(hash),
       value: encodeSymbol(blockSymbol),
     });
+
+    // block symbol -> block hash
+    this.dbBatches['sym-block'].push({
+      type: 'put',
+      key: encodeSymbol(blockSymbol),
+      value: hexToBin(hash),
+    });
+  }
+
+  async getBlockHash(symbol) {
+    let encodedSymbol;
+
+    if (typeof symbol != 'number') {
+      encodedSymbol = encodeSymbol(symbol);
+    } else {
+      encodedSymbol = symbol;
+    }
+
+    const encodedHash = await this.db['sym-block'].get(encodedSymbol)
+      .catch(() => null);
+
+    return binToHex(encodedHash);
   }
 
   async getBlockSymbol(hash) {
@@ -1019,20 +1060,29 @@ class Indexer {
       let blockHash;
 
       if (typeof atBlock === 'number') {
-        blockSymbol = atBlock;
-
-        if (blockSymbol < this.lastBlockSymbol) {
+        // lookup block hash
+        if (atBlock < this.lastBlockSymbol) {
           throw new Error(
             `Block height ${atBlock} is not available.`
             + ` Node to ${this.this.lastBlockSymbol}.`,
           );
         }
+
+        blockSymbol = atBlock;
+        blockHash = await this.getBlockHash(blockSymbol);
+
+        if (!blockHash) {
+          throw new Error(`No block hash found for height ${blockSymbol}`);
+        }
+
       } else if (typeof atBlock === 'string') {
-        // lookup
-        blockSymbol = await this.getBlockSymbol(atBlock);
-        if (blockSymbol == null) throw new Error(`No block found for hash ${atBlock}`);
-       
+        // lookup block symbol
         blockHash = atBlock;
+        blockSymbol = await this.getBlockSymbol(blockHash);
+
+        if (blockSymbol == null) {
+          throw new Error(`No block found for hash ${atBlock}`);
+        }
       }
 
       // If no block was specified, use the most recent one
@@ -1075,6 +1125,7 @@ class Indexer {
         blockSymbol,
         blockHash,
       };
+      
     } catch (e) {
       console.error(e);
       return null;
@@ -1177,6 +1228,7 @@ class Indexer {
 
     // this.createDatabase('metadata');
     this.createDatabaseInfo('block-sym', PREFIX_BLOCK_SYM);
+    this.createDatabaseInfo('sym-block', PREFIX_SYM_BLOCK);
     this.createDatabaseInfo('tx-sym', PREFIX_TX_SYM);
     this.createDatabaseInfo('utxo', PREFIX_UTXO);
     this.createDatabaseInfo('address-utxos', PREFIX_ADDRESS_UTXOS);
