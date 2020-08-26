@@ -1029,8 +1029,8 @@ class Indexer {
         }
       } else if (typeof atBlock === 'string') {
         // lookup
-        blockSymbol = this.getBlockSymbol(atBlock);
-
+        blockSymbol = await this.getBlockSymbol(atBlock);
+    console.log(atBlock, blockSymbol);
         if (blockSymbol == null) throw new Error(`No block found for hash ${atBlock}`);
       }
 
@@ -1056,7 +1056,6 @@ class Indexer {
         }
 
         const decodedUtxo = UtxoValueSchema.decode(utxo.value);
-        console.log(decodedUtxo);
 
         // Skip if utxo does not exist at specified block
         if (decodedUtxo.createdOnBlock > blockSymbol) {
