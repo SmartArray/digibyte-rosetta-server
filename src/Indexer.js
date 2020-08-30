@@ -50,6 +50,7 @@ const VALID_PREFIXES = [
   PREFIX_UTXO,
   PREFIX_ADDRESS_UTXOS,
   PREFIX_ADDRESS_SYM,
+  PREFIX_SYM_BLOCK,
 ];
 
 const convertToSatoshis = (value) => {
