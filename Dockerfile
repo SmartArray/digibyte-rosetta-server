@@ -8,13 +8,7 @@ ARG rpc_password=pass
 ARG dgb_version=7.17.2
 ARG arch=x86_64
 ARG offline=false
-
-ARG main_p2p_port=12024
-ARG main_rpc_port=14022
-ARG test_p2p_port=12026
-ARG test_rpc_port=14023
-
-ARG listening_port=8080
+ARG regtest_simulate_mining=0
 
 # You can confirm your timezone by setting the TZ database name field from:
 # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
@@ -54,8 +48,8 @@ RUN DEBIAN_FRONTEND="noninteractive" apt-get update \
 RUN git clone https://github.com/DigiByte-Core/digibyte/ --branch ${dgb_version} --single-branch
 
 # Determine how many cores the build process will use.
-RUN export CORES=1 && [ $parallize_build -ne 0 ] && export CORES=$(nproc); \
-  echo "Using $CORES core(s) for build process."
+RUN export CORES="" && [ $parallize_build -gt 1 ] && export CORES="-j $(nproc)"; \
+  echo "Using $parallize_build core(s) for build process."
 
 # Prepare the build process
 RUN cd ${rootdatadir}/digibyte && ./autogen.sh \
@@ -63,7 +57,7 @@ RUN cd ${rootdatadir}/digibyte && ./autogen.sh \
 
 # Start the build process
 RUN cd ${rootdatadir}/digibyte \
-  && make \
+  && make $CORES \
   && make install
 
 # Delete source
@@ -107,7 +101,7 @@ regtest=${use_regtest}\n" | tee "${rootdatadir}/digibyte.conf"'
 ENV ROOTDATADIR "$rootdatadir"
 ENV ROSETTADIR "/root/rosetta-node"
 ENV DGB_VERSION "$dgb_version"
-ENV PORT $listening_port
+ENV PORT 8080 # Rosetta HTTP Port
 ENV DATA_PATH "${rootdatadir}/utxodb"
 ENV RPC_USER "$rpc_username"
 ENV RPC_PASS "$rpc_password"
@@ -125,6 +119,7 @@ RUN if [ "$use_testnet" = "0" ] && [ "$use_regtest" = "0" ]; \
     then \
       echo 'export RPC_PORT="18443"' >> ~/env; \
       echo 'export DGB_NETWORK="regtest"' >> ~/env; \
+      echo 'export REGTEST_SIMULATE_MINING="$regtest_simulate_mining"' >> ~/env; \
     else \
       echo 'export RPC_PORT=""' >> ~/env; \
       echo 'export DGB_NETWORK=""' >> ~/env; \
@@ -133,6 +128,9 @@ RUN if [ "$use_testnet" = "0" ] && [ "$use_regtest" = "0" ]; \
 # Allow Communications:
 #         p2p mainnet   rpc mainnet   p2p testnet   rpc testnet    p2p regtest    rpc regtest 
 EXPOSE    12024/tcp     14022/tcp     12026/tcp     14023/tcp      18444/tcp      18443/tcp
+
+#         Rosetta HTTP Node
+EXPOSE    8080/tcp
 
 # Create symlinks shouldn't be needed as they're installed in /usr/local/bin/
 #RUN ln -s /usr/local/bin/digibyted /usr/bin/digibyted
