@@ -427,7 +427,8 @@ class Indexer {
 
         const pair = await this.utxoExists(txid, vout);
         if (pair == null) {
-          throw new Error(`Blockchain error. Utxo ${txid}:${vout} does not exist.`);
+          console.error(`Warning: Utxo ${txid}:${vout} does not exist, can not delete it`);
+          continue;
         }
 
         // 2.1) Re-validate utxo.
@@ -1114,7 +1115,7 @@ class Indexer {
         }
 
         // Skip if spent before specified block
-        if (decodedUtxo.spentOnBlock != null && blockSymbol > decodedUtxo.spentOnBlock) {
+        if (decodedUtxo.spentOnBlock != null && blockSymbol >= decodedUtxo.spentOnBlock) {
           continue;
         }
 
