@@ -7,6 +7,7 @@ ARG rpc_username=user
 ARG rpc_password=pass
 ARG dgb_version=7.17.2
 ARG arch=x86_64
+ARG offline=false
 
 ARG main_p2p_port=12024
 ARG main_rpc_port=14022
@@ -110,6 +111,7 @@ ENV PORT $listening_port
 ENV DATA_PATH "${rootdatadir}/utxodb"
 ENV RPC_USER "$rpc_username"
 ENV RPC_PASS "$rpc_password"
+ENV OFFLINE_MODE "$offline"
 
 RUN if [ "$use_testnet" = "0" ] && [ "$use_regtest" = "0" ]; \
     then \
@@ -129,8 +131,8 @@ RUN if [ "$use_testnet" = "0" ] && [ "$use_regtest" = "0" ]; \
     fi
 
 # Allow Communications:
-#         p2p mainnet   rpc mainnet   rpc testnet   p2p testnet
-EXPOSE    12024/tcp     14022/tcp     14023/tcp     12026/tcp
+#         p2p mainnet   rpc mainnet   p2p testnet   rpc testnet    p2p regtest    rpc regtest 
+EXPOSE    12024/tcp     14022/tcp     12026/tcp     14023/tcp      18444/tcp      18443/tcp
 
 # Create symlinks shouldn't be needed as they're installed in /usr/local/bin/
 #RUN ln -s /usr/local/bin/digibyted /usr/bin/digibyted
