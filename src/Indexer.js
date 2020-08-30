@@ -46,7 +46,6 @@ const PREFIX_ADDRESS_SYM = 'A';
 
 const VALID_PREFIXES = [
   PREFIX_BLOCK_SYM,
-  PREFIX_SYM_BLOCK,
   PREFIX_TX_SYM,
   PREFIX_UTXO,
   PREFIX_ADDRESS_UTXOS,
@@ -269,7 +268,7 @@ class Indexer {
 
         const blockExists = await this.getBlockSymbol(block.hash);
         const previousBlockHash = block.previousblockhash;
-        const previousBlockExists = await this.getBlockSymbol(previousBlockHash);
+        const previousBlockSymbol = await this.getBlockSymbol(previousBlockHash);
 
         if (block.remove) {
           /**
@@ -283,7 +282,7 @@ class Indexer {
           // Exit if the previous block does not exist.
           // This should never happen, but we need the block symbol
           // in order to reset the lastBlockSymbol.
-          if (previousBlockExists == null && block.height != 0) {
+          if (previousBlockSymbol == null && block.height != 0) {
             throw new Error(`Cannot remove block with hash ${block.hash} `
               + `because the symbol of the previous block hash ${previousBlockHash} `
               + `does not exist`);            
@@ -291,20 +290,22 @@ class Indexer {
 
           // Flush evereything to disk before we remove the 
           // affected data.
+          console.log('Saving prior changes before deleting block...');
           await this.processBatches();
 
           // Remove
+          console.log('Batching Operations...');
           await this.removeBlock(block);
 
           // Update the internal state
-          this.lastBlockSymbol = previousBlockExists;
+          this.lastBlockSymbol = previousBlockSymbol;
           this.bestBlockHash = previousBlockHash;
           this.safeLastBlockSymbol = this.lastBlockSymbol;
 
-          // Save metadata
-          const batches = [];
-          await this.processMetadata(batches);
-          await this.writeBatches(batches);
+          // Commit updates
+          console.log('Saving batched operations...');
+          await this.processBatches();
+          console.log('Done!');
 
         } else {
           /**
@@ -318,14 +319,14 @@ class Indexer {
           }
 
           // Check if the previous block was already processed
-          if (previousBlockExists == null && block.height != 0) {
+          if (previousBlockSymbol == null && block.height != 0) {
             throw new Error(`Previous block ${previousBlockHash} does not exist`);
           }
-        }
 
-        // Update the database
-        this.bestBlockHash = block.hash;
-        await this.saveBlock(block);
+          // Update the database
+          this.bestBlockHash = block.hash;
+          await this.saveBlock(block);          
+        }
       }
 
     } catch (e) {
@@ -360,6 +361,7 @@ class Indexer {
       this.processBatchedBlockSymbolMappings(batchedOperations),
       this.processBatchedTxSymbols(batchedOperations),
       this.processBatchedUtxos(batchedOperations),
+      this.processBatchedAddressUtxoLists(batchedOperations),
       this.processMetadata(batchedOperations),
     ]);
 
@@ -427,8 +429,7 @@ class Indexer {
 
         const pair = await this.utxoExists(txid, vout);
         if (pair == null) {
-          console.error(`Warning: Utxo ${txid}:${vout} does not exist, can not delete it`);
-          continue;
+          throw new Error(`Blockchain error. Utxo ${txid}:${vout} does not exist.`);
         }
 
         // 2.1) Re-validate utxo.
@@ -440,7 +441,12 @@ class Indexer {
           decoded.spentInTx = null;
 
           const value = UtxoValueSchema.encode(decoded);
-          await this.db.utxo.put(pair.key, value);
+
+          this.dbBatches.utxo.push({
+            type: 'put',
+            key: pair.key,
+            value: value,
+          });
 
         } catch (e) {
           console.error(pair)
@@ -463,7 +469,11 @@ class Indexer {
           // Delete the utxo
           console.log(`  Deleting ${tx.txid}:${output.n}`);
           const key = this.serializeUtxoKey(txSym, output.n);
-          await this.db.utxo.del(key);
+
+          this.dbBatches.utxo.push({
+            type: 'del',
+            key: key,
+          });
 
           if (!address || !address.key) {
             continue;
@@ -491,11 +501,11 @@ class Indexer {
           }
 
           // Save the list again
-          await this.db['address-utxos']
-            .put(
-              encodeSymbol(addressSymbol),
-              AddressValueSchema.encode(deserializedUtxoList)
-            );
+          this.dbBatches['address-utxos'].push({
+            type: 'put',
+            key: encodeSymbol(addressSymbol),
+            value: AddressValueSchema.encode(deserializedUtxoList),
+          });
 
           /**
            * 3.3) We do not remove the address symbol
@@ -508,11 +518,17 @@ class Indexer {
       } 
 
       // Delete tx symbol
-      await this.db['tx-sym'].del(hexToBin(tx.txid));
+      this.dbBatches['tx-sym'].push({
+        type: 'del',
+        key: hexToBin(tx.txid),
+      });
     }
 
     // Remove the block symbol
-    await this.db['block-sym'].del(hexToBin(hash));
+    this.dbBatches['block-sym'].push({
+      type: 'del',
+      key: hexToBin(hash),
+    });
 
     // Recover last tx symbol
     if (minTxSymbol != Number.MAX_VALUE) {
@@ -572,6 +588,14 @@ class Indexer {
 
     for (let op of operations) list.push(op);
     ops.length = 0;
+  }
+
+  processBatchedAddressUtxoLists(list) {
+    const ops = this.dbBatches['address-utxos'];
+    const operations = this.db['address-utxos'].processList(ops);
+
+    for (let op of operations) list.push(op);
+    ops.length = 0;    
   }
 
   processBatchedUtxos(list) {
@@ -965,12 +989,12 @@ class Indexer {
   async getBlockHash(symbol) {
     let encodedSymbol;
 
-    if (typeof symbol == 'number') {
+    if (typeof symbol != 'number') {
       encodedSymbol = encodeSymbol(symbol);
     } else {
       encodedSymbol = symbol;
     }
-    
+
     const encodedHash = await this.db['sym-block'].get(encodedSymbol)
       .catch(() => null);
 
@@ -1063,10 +1087,10 @@ class Indexer {
 
       if (typeof atBlock === 'number') {
         // lookup block hash
-        if (atBlock > this.lastBlockSymbol) {
+        if (atBlock < this.lastBlockSymbol) {
           throw new Error(
             `Block height ${atBlock} is not available.`
-            + ` Node to ${this.lastBlockSymbol}.`,
+            + ` Node to ${this.this.lastBlockSymbol}.`,
           );
         }
 
@@ -1088,7 +1112,7 @@ class Indexer {
       }
 
       // If no block was specified, use the most recent one
-      if (blockSymbol == null) {
+      if (!blockSymbol) {
         blockSymbol = this.lastBlockSymbol;
         blockHash = this.bestBlockHash;
       }
@@ -1115,7 +1139,7 @@ class Indexer {
         }
 
         // Skip if spent before specified block
-        if (decodedUtxo.spentOnBlock != null && blockSymbol >= decodedUtxo.spentOnBlock) {
+        if (decodedUtxo.spentOnBlock != null && blockSymbol > decodedUtxo.spentOnBlock) {
           continue;
         }
 
@@ -1127,7 +1151,7 @@ class Indexer {
         blockSymbol,
         blockHash,
       };
-      
+
     } catch (e) {
       console.error(e);
       return null;
@@ -1144,6 +1168,7 @@ class Indexer {
       const { key, value, symbol } = utxo;
 
       const decoded = UtxoValueSchema.decode(value);
+      console.log(decoded);
 
       const addressSymbol = decoded.address;
       const sats = decoded.sats;
