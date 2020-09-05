@@ -225,7 +225,6 @@ class Indexer {
     if (removed) {
       // Block removed
       const { hash, index } = block;
-      console.log(`Removing block ${hash} (${index})...`);
       blockHash = hash;
     } else {
       // Block added
@@ -289,13 +288,13 @@ class Indexer {
               + `does not exist`);            
           }
 
+          console.log(`Removing block ${block.hash} due to reorg...`);  
+
           // Flush evereything to disk before we remove the 
           // affected data.
-          console.log('Saving prior changes before deleting block...');
           await this.processBatches();
 
           // Remove
-          console.log('Batching Operations...');
           await this.removeBlock(block);
 
           // Update the internal state
@@ -304,7 +303,6 @@ class Indexer {
           this.safeLastBlockSymbol = this.lastBlockSymbol;
 
           // Commit updates
-          console.log('Saving batched operations...');
           await this.processBatches();
           console.log('Done!');
 
@@ -321,7 +319,8 @@ class Indexer {
 
           // Check if the previous block was already processed
           if (previousBlockSymbol == null && block.height != 0) {
-            throw new Error(`Previous block ${previousBlockHash} does not exist`);
+            console.log(`Previous block ${previousBlockHash} does not exist`);
+            await this.checkForReorg();
           }
 
           // Update the database
@@ -367,7 +366,6 @@ class Indexer {
     ]);
 
     await this.writeBatches(batchedOperations);
-    // console.log('VERBOSE: Metadata saved');
 
     batchedOperations.length = 0;
 
@@ -468,7 +466,7 @@ class Indexer {
           const addressSymbol = address.value;
 
           // Delete the utxo
-          console.log(`  Deleting ${tx.txid}:${output.n}`);
+          //console.log(`  Deleting ${tx.txid}:${output.n}`);
           const key = this.serializeUtxoKey(txSym, output.n);
 
           this.dbBatches.utxo.push({
@@ -485,19 +483,21 @@ class Indexer {
            */
 
           // Get the utxo list
-          console.log(`  Deleting ${tx.txid}:${output.n} from ${address.key}`);
+          //console.log(`  Deleting ${tx.txid}:${output.n} from ${address.key}`);
           const serializedUtxoList = await this.db['address-utxos'].get(encodeSymbol(addressSymbol))
             .catch(() => EMPTY_UTXO_LIST);
-
+          
           // Decode the existing structure
-          const deserializedUtxoList = AddressValueSchema.decode(serializedUtxoList);   
-
+          const deserializedUtxoList = AddressValueSchema.decode(serializedUtxoList);  
+ 
           // Remove the affected utxo
           for (let i = deserializedUtxoList.txSymbol.length; i >= 0; --i) {
-            if (deserializedUtxoList.txSymbol == txSym &&
-                deserializedUtxoList.vout == output.n) {
+            if (deserializedUtxoList.txSymbol[i] == txSym &&
+                deserializedUtxoList.vout[i] == output.n) {
+              // console.log('REMOVING UTXO', i, `(${output.n} | ${txSym})`)
               deserializedUtxoList.txSymbol.splice(i, 1);
               deserializedUtxoList.vout.splice(i, 1);
+              break;
             }
           }
 
@@ -961,14 +961,6 @@ class Indexer {
     this.lastAddressUtxos[address] = utxoList;
   }
 
-  async batchUtxoRemovalFromAddress(tx, txSymbol, output) {
-    // Remove UTXO from address
-    if (!output.address) return;
-
-    // const address = output.scriptPubKey.addresses[0];
-    console.log('REORG REMOVAL', tx.txid);
-  }
-
   async batchBlockSymbol(hash, blockSymbol) {
     this.lastSeenBlockHashes[hash] = blockSymbol;
 
@@ -1169,8 +1161,6 @@ class Indexer {
       const { key, value, symbol } = utxo;
 
       const decoded = UtxoValueSchema.decode(value);
-      console.log(decoded);
-
       const addressSymbol = decoded.address;
       const sats = decoded.sats;
 
