@@ -10,31 +10,31 @@ const ADDRESS_BATCH_SIZE = 20000;
 const SATOSHI = 100000000;
 
 const SymbolSchema = new JSBinType({
-  symbol: 'uint',
+  'symbol': 'uint',
 });
 
 const UtxoValueSchema = new JSBinType({
-  sats: 'float',
+  'sats': 'float',
   'address?': 'uint',
-  createdOnBlock: 'uint',
+  'createdOnBlock': 'uint',
   'spentOnBlock?': 'uint',
   'spentInTx?': 'uint',
 });
 
 const UtxoKeySchema = new JSBinType({
-  txSymbol: 'uint',
-  n: 'uint',
+  'txSymbol': 'uint',
+  'n': 'uint',
 });
 
 const AddressValueSchema = new JSBinType({
-  txSymbol: ['uint'],
-  vout: ['uint'],
+  'txSymbol': ['uint'],
+  'vout': ['uint'],
   'address?': 'string',
 });
 
 const EMPTY_UTXO_LIST = AddressValueSchema.encode({
-  txSymbol: [],
-  vout: [],
+  'txSymbol': [],
+  'vout': [],
 });
 
 const PREFIX_BLOCK_SYM = 'B';
