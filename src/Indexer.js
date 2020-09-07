@@ -982,14 +982,14 @@ class Indexer {
   async getBlockHash(symbol) {
     let encodedSymbol;
 
-    if (typeof symbol != 'number') {
+    if (typeof symbol == 'number') {
       encodedSymbol = encodeSymbol(symbol);
     } else {
       encodedSymbol = symbol;
     }
 
     const encodedHash = await this.db['sym-block'].get(encodedSymbol)
-      .catch(() => null);
+      .catch((e) => console.error(e));
 
     return binToHex(encodedHash);
   }
@@ -1080,10 +1080,10 @@ class Indexer {
 
       if (typeof atBlock === 'number') {
         // lookup block hash
-        if (atBlock < this.lastBlockSymbol) {
+        if (atBlock > this.lastBlockSymbol) {
           throw new Error(
             `Block height ${atBlock} is not available.`
-            + ` Node to ${this.this.lastBlockSymbol}.`,
+            + ` Node synced to ${this.lastBlockSymbol}.`,
           );
         }
 
@@ -1225,7 +1225,8 @@ class Indexer {
       const addressSymbol = await this._db.get('latestAddressSymbol');
       this.lastAddressSymbol = returnSymbol(addressSymbol);
     } catch (e) {
-      this.lastAddressSymbol = -1;
+      // Address Symbols start at 1.
+      this.lastAddressSymbol = 0;
     }
   }
 
