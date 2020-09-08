@@ -110,3 +110,5 @@ Success: Index End Condition [Index: 2500]
 master@digiassetsd:~/rosetta$ 
 
 ```
+
+Several issues such as bad number rounding were occuring. The above output is showing the validation after fixing these issues.
