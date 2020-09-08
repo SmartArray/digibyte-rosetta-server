@@ -38,14 +38,18 @@ docker run -p 12026:12026 -p 8080:8080 digibyte/rosetta:latest
 ```
 
 ## Test
-To have some example requests to test the reachability of your node using curl, have a look at the document [Example Requests](./docs/ExampleRequests.md).
+Run `npm run test` in order to run js unit tests.
+Run `npm run test-api` in order to test the data api and construction api in an online/offline environment built with docker-compose.
+
+Several example requests to test the reachability of your node using curl are shown in this document: [Example Requests](./docs/ExampleRequests.md).
+An example on how to validate a mainnet account balance is shown here: [Validation](./docs/Validation.md)
 
 ## Current State
 Currently, only the [Rosetta Data API](https://www.rosetta-api.org/docs/data_api_introduction.html) is implemented by this node. The Construction API will be completed soon.
 
 ## ToDos
 - [ ] Implement Construction API for Offline and Online Environments
-- [ ] Test the node using coinbase's [rosetta-cli](https://github.com/coinbase/rosetta-cli.git)
-- [ ] Run the mainnet node and wait for full sync
-- [ ] Test some utxo balance checks
+- [x] Test the node using coinbase's [rosetta-cli](https://github.com/coinbase/rosetta-cli.git)
+- [x] Run the mainnet node and wait for full sync
+- [x] Test some utxo balance checks
 - [ ] Setup automated tests

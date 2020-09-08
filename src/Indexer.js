@@ -8,6 +8,7 @@ const BLOCK_BATCH_SIZE = 200;
 const TX_BATCH_SIZE = 20000;
 const ADDRESS_BATCH_SIZE = 20000;
 const SATOSHI = 100000000;
+const SAVE_INTERVAL = 1000 * 30; // 30 secs
 
 const SymbolSchema = new JSBinType({
   'symbol': 'uint',
@@ -167,6 +168,7 @@ class Indexer {
     this.lastTxSymbol = undefined;
     this.lastAddressSymbol = undefined;
     this.safeLastBlockSymbol = undefined;
+    this.lastTimeSaved = Date.now();
 
     this.genesisBlockHashUpdated = false;
 
@@ -371,6 +373,7 @@ class Indexer {
 
     // It is now safe to query block up to `this.lastBlockSymbol`
     this.safeLastBlockSymbol = this.lastBlockSymbol;
+    this.lastTimeSaved = Date.now();
   }
 
   async processBatchesIfNeeded() {
@@ -380,7 +383,8 @@ class Indexer {
       this.dbBatches['address-sym'].length >= ADDRESS_BATCH_SIZE
     );
 
-    const timeCriterion = false; // ToDo
+    const timeCriterion = false;
+      // (new Date() - new Date(this.lastTimeSaved) > SAVE_INTERVAL);
 
     if (batchCriterion || timeCriterion) {
       await this.processBatches();
@@ -918,7 +922,6 @@ class Indexer {
       const identifier = `${pair.txid}:${pair.n}`;
 
       if (!pair.output.address || !pair.output.address.key) {
-        // console.log(`Skipping ${identifier}`);
         continue;
       }
 
@@ -982,14 +985,14 @@ class Indexer {
   async getBlockHash(symbol) {
     let encodedSymbol;
 
-    if (typeof symbol != 'number') {
+    if (typeof symbol == 'number') {
       encodedSymbol = encodeSymbol(symbol);
     } else {
       encodedSymbol = symbol;
     }
 
     const encodedHash = await this.db['sym-block'].get(encodedSymbol)
-      .catch(() => null);
+      .catch((e) => console.error(e));
 
     return binToHex(encodedHash);
   }
@@ -998,7 +1001,6 @@ class Indexer {
     if (!hash) return null;
 
     // Return symbol from the last seen cache.
-    // console.log(hash);
     const isLastSeen = this.lastSeenBlockHashes[hash];
     if (isLastSeen != null) return isLastSeen;
 
@@ -1080,10 +1082,10 @@ class Indexer {
 
       if (typeof atBlock === 'number') {
         // lookup block hash
-        if (atBlock < this.lastBlockSymbol) {
+        if (atBlock > this.lastBlockSymbol) {
           throw new Error(
             `Block height ${atBlock} is not available.`
-            + ` Node to ${this.this.lastBlockSymbol}.`,
+            + ` Node synced to ${this.lastBlockSymbol}.`,
           );
         }
 
@@ -1126,24 +1128,26 @@ class Indexer {
 
         const decodedUtxo = UtxoValueSchema.decode(utxo.value);
 
-        // Skip if utxo does not exist at specified block
+        // Skip if utxo did not exist at specified block
         if (decodedUtxo.createdOnBlock > blockSymbol) {
           continue;
         }
 
         // Skip if spent before specified block
-        if (decodedUtxo.spentOnBlock != null && blockSymbol > decodedUtxo.spentOnBlock) {
+        if (decodedUtxo.spentOnBlock != null && blockSymbol >= decodedUtxo.spentOnBlock) {
           continue;
         }
 
         balance += decodedUtxo.sats;
       }
 
-      return {
+      const ret = {
         balance,
         blockSymbol,
         blockHash,
       };
+
+      return ret;
 
     } catch (e) {
       console.error(e);
@@ -1225,7 +1229,8 @@ class Indexer {
       const addressSymbol = await this._db.get('latestAddressSymbol');
       this.lastAddressSymbol = returnSymbol(addressSymbol);
     } catch (e) {
-      this.lastAddressSymbol = -1;
+      // Address Symbols start at 1.
+      this.lastAddressSymbol = 0;
     }
   }
 

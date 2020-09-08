@@ -1,10 +1,12 @@
 {
   "name": "digibyte-rosetta-server",
   "version": "1.0.0",
-  "description": "Server implementation using Rosetta SDK",
+  "description": "Rosetta Node Implementation using Rosetta SDK",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test-api": "cd test && docker-compose up",
+    "test": "mocha test/js/*.test.js",
+    "build": "docker build -t digibyte-rosetta:latest .",
     "start": "node --max-old-space-size=4096 index.js",
     "dev": "nodemon .",
     "lint": "eslint ."
@@ -26,6 +28,7 @@
   "author": "yoshijaeger",
   "license": "MIT",
   "devDependencies": {
+    "axios": "^0.20.0",
     "chai": "^4.2.0",
     "eslint": "^7.7.0",
     "eslint-config-airbnb": "^18.2.0",
