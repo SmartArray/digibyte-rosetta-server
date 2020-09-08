@@ -20,9 +20,9 @@ DigiByte Rosetta Node offering a unified API according to the standard proposed 
 ```bash
 git clone https://github.com/SmartArray/digibyte-rosetta-server.git
 ```
-2. Build the docker container
+2. Build the docker image
 ```bash
-# Build the docker container for testnet (may take a while).
+# Build the docker image for testnet (may take a while).
 # Other build args are documented in ./Dockerfile
 cd digibyte-rosetta-server
 docker build -t digibyte/rosetta:latest --build-arg use_testnet=1 .
