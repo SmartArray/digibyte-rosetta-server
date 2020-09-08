@@ -1105,7 +1105,7 @@ class Indexer {
       }
 
       // If no block was specified, use the most recent one
-      if (!blockSymbol) {
+      if (blockSymbol == null) {
         blockSymbol = this.lastBlockSymbol;
         blockHash = this.bestBlockHash;
       }
