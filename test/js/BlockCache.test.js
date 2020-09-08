@@ -1,10 +1,10 @@
 const { expect } = require('chai');
 
 describe('BlockCache', () => {
-  const BlockCache = require('../BlockCache');
+  const BlockCache = require('../../src/BlockCache');
 
   it('should have a default instance', () => {
-    const SyncBlockCache = require('../syncBlockCache');
+    const SyncBlockCache = require('../../src/syncBlockCache');
     SyncBlockCache.put('1', 'a');
 
     const existing = SyncBlockCache.get('1');

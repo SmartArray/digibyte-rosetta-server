@@ -35,7 +35,9 @@ const txOperations = async (tx, isMempoolTx = false) => {
   const status = isMempoolTx ? OperationStatus.SUCCESS.status : OperationStatus.SUCCESS.status;
 
   for (let input of tx.vin) {
-    if (input.coinbase) continue;
+    if (input.coinbase) {
+      continue;
+    }
 
     // Inputs:
     //   inputs are spent from accounts (negative amounts)
@@ -72,6 +74,8 @@ const txOperations = async (tx, isMempoolTx = false) => {
 
     const address = output.scriptPubKey.addresses[0];
     const nextOperationId = operationId++;
+
+    let trig = false;
 
     ret.push(Types.Operation.constructFromObject({
       operation_identifier: new Types.OperationIdentifier(nextOperationId),

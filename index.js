@@ -43,6 +43,7 @@ console.log(`
 
 /* Create a server configuration */
 const Server = new RosettaSDK.Server({
+  URL_HOST: Config.host,
   URL_PORT: Config.port,
 });
 
@@ -72,14 +73,17 @@ Server.register('/mempool', ServiceHandlers.Mempool.mempool);
 Server.register('/mempool/transaction', ServiceHandlers.Mempool.mempoolTransaction);
 
 /* Construction API */
-Server.register('/construction/metadata', ServiceHandlers.Construction.constructionMetadata);
-Server.register('/construction/submit', ServiceHandlers.Construction.constructionSubmit);
-Server.register('/construction/combine', ServiceHandlers.Construction.constructionCombine);
-Server.register('/construction/derive', ServiceHandlers.Construction.constructionDerive);
-Server.register('/construction/hash', ServiceHandlers.Construction.constructionHash);
-Server.register('/construction/parse', ServiceHandlers.Construction.constructionParse);
-Server.register('/construction/payloads', ServiceHandlers.Construction.constructionPayloads);
-Server.register('/construction/preprocess', ServiceHandlers.Construction.constructionPreprocess);
+if (Config.offline) {
+  Server.register('/construction/derive', ServiceHandlers.Construction.constructionDerive); // 1
+  Server.register('/construction/preprocess', ServiceHandlers.Construction.constructionPreprocess); // 2
+  Server.register('/construction/payloads', ServiceHandlers.Construction.constructionPayloads); // 4
+  Server.register('/construction/parse', ServiceHandlers.Construction.constructionParse); // 5, 7
+  Server.register('/construction/combine', ServiceHandlers.Construction.constructionCombine); // 6
+  Server.register('/construction/hash', ServiceHandlers.Construction.constructionHash); // 8
+} else {
+  Server.register('/construction/metadata', ServiceHandlers.Construction.constructionMetadata); // 3
+  Server.register('/construction/submit', ServiceHandlers.Construction.constructionSubmit); // 9
+}
 
 /* Initialize Syncer */
 const startSyncer = async () => {
@@ -162,11 +166,13 @@ const initOffline = async () => {
 };
 
 if (Config.offline) {
+  console.log("Starting in offline mode...");
   initOffline().catch((e) => {
     console.error(`Could not start node in offline mode: ${e.message}`);
     console.error(e);
   });
 } else {
+  console.log("Starting in online mode...");
   init().catch((e) => {
     console.error(`Could not start node in online mode: ${e.message}`);
     console.error(e);

@@ -1,0 +1,111 @@
+#
+
+version: "3.0"
+
+networks:
+  online_net:
+  offline_net:
+    internal: true
+  test:
+    internal: true
+
+# 1) regtest=1 offline=1 portmap=1337:8080
+# 2) regtest=1 offline=0 portmap=1338:8080
+# 3) rosetta-cli
+# 4) test_runner
+
+services:
+  # Offline Node
+  digibyte_offline:
+    build:
+      dockerfile: Dockerfile
+      context: ..      
+      args:
+        - use_regtest=1
+        - rootdatadir=/data
+        - offline=1
+
+    # ports:
+    #   - "0.0.0.0:1337:8080"
+
+    environment:
+      - HOST=0.0.0.0
+      - PORT=1337
+
+    #volumes:
+    #  - ./offline_data:/data
+
+    networks:
+      - offline_net
+      - test
+
+    container_name: digibyte_offline
+
+  # Online Node
+  digibyte_online:
+    build:
+      dockerfile: Dockerfile
+      context: ..      
+      args:
+        - use_regtest=1
+        - rootdatadir=/data
+        - offline=0
+        - regtest_simulate_mining=1
+
+    #ports:
+    #  - "0.0.0.0:1338:8080"
+
+    environment:
+      - RUN_TESTS=0
+      - HOST=0.0.0.0
+      - PORT=1338
+
+    #volumes:
+    #  - ./online_data:/data
+
+    networks:
+      - online_net
+      - test
+
+    depends_on:
+      - digibyte_offline
+
+    container_name: digibyte_online
+
+  # Rosetta CLI tester
+  rosetta_cli:
+    build:
+      dockerfile: ./test/rosetta-cli/Dockerfile
+      context: ..      
+      args: 
+        - version_tag=4bb48b24a794deb3635973e32d1ea806e5b30729
+
+    environment:
+      - OFFLINE_HOST=digibyte_offline
+      - ONLINE_HOST=digibyte_online        
+      - OFFLINE_PORT=1337
+      - ONLINE_PORT=1338
+
+    networks:
+      - test
+
+    depends_on:
+      - digibyte_online
+
+  # # NodeJS Test Runner
+  # test_runner:
+  #   build: 
+  #     dockerfile: ./test/test-runner/Dockerfile
+  #     context: ..
+
+  #   environment:
+  #     - OFFLINE_HOST=digibyte_offline
+  #     - ONLINE_HOST=digibyte_online        
+  #     - OFFLINE_PORT=1337
+  #     - ONLINE_PORT=1338
+
+  #   networks:
+  #     - test
+
+  #   depends_on:
+  #     - digibyte_online      

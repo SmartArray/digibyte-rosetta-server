@@ -204,7 +204,7 @@ const constructionPayloads = async (params) => {
     .from(metadata.relevant_inputs);
 
   for (let operation of operations) {
-    transaction.to(operation.account.address, operation.amount.value);    
+    transaction.to(operation.account.address, operation.amount.value);
   }
 
   return {};

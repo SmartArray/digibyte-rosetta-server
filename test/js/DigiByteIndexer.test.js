@@ -4,7 +4,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const os = require('os');
 
-const Indexer = require('../src/Indexer');
+const Indexer = require('../../src/Indexer');
 
 describe('DigiByteIndexer', () => {
   let dbPath;
