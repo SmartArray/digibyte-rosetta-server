@@ -83,7 +83,7 @@ const txOperations = async (tx, isMempoolTx = false) => {
       status,
       account: new Types.AccountIdentifier(address),
       amount: Types.Amount.constructFromObject({
-        value: parseInt(output.value * Constants.SATOSHIS),
+        value: parseInt(Math.round(output.value * Constants.SATOSHIS)),
         currency,
       }),
     }));
