@@ -7,8 +7,8 @@
    DigiByte Rosetta Server (beta)
 </h3>
 <p align="center">
-	Node Version: <pre>1.0.0</pre><br>
-	Rosetta Version: <pre>1.4.1</pre>
+	Node Version: 1.0.0<br>
+	Rosetta Version: 1.4.1
 </p>
 <p align="center">
 	DigiByte Rosetta Node offering a unified API according to the standard proposed by Coinbase.
