@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://www.rosetta-api.org">
-    <img width="90%" alt="Rosetta" src="docs/banner.png">
+    <img width="90%" alt="Rosetta" src="docs/images/banner.png">
   </a>
 </p>
 <h3 align="center">

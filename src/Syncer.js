@@ -50,7 +50,7 @@ class Syncer extends EventEmitter {
     /* Handle events of the syncer */
     syncer.on(RosettaSDK.Syncer.Events.BLOCK_ADDED, this.blockAdded.bind(this));
     syncer.on(RosettaSDK.Syncer.Events.BLOCK_REMOVED, this.blockRemoved.bind(this));
-    syncer.on(RosettaSDK.Syncer.Events.BLOCK_REMOVED, this.syncStopped.bind(this));
+    syncer.on(RosettaSDK.Syncer.Events.SYNC_CANCELLED, this.syncStopped.bind(this));
 
     this.syncPaused = false;
     this.syncer = syncer;
