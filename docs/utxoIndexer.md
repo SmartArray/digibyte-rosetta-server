@@ -19,3 +19,10 @@ The syncer emits events to the indexer, such as `BLOCK_ADDED` and `BLOCK_REMOVED
 The `/block` endpoint handler (one of the `Handlers`) caches the RPC blocks into the `BlockCache` instance so that the `UTXO Indexer` instance can retrieve those later. Storing the RPC blocks is necessary, since UTXOs are not included in the response of the `/block` endpoint, but the indexer needs to have access to those.
 
 The `UTXO Indexer` extracts the information from the RPC blocks, encodes them to binary and makes them accessible.
+
+## Space efficient encoding
+LevelDB is fully capable of handling binary data. Both, keys and values, can be specified with binary encodings. This is very useful in order to save a lot of space.
+The following encodings are used throughout the indexing implementation:
+
+- Hexadecimal strings (such as Transaction Identifiers and Block Identifiers) are directly saved as binary data instead of its hexadecimal ascii representation.
+- Arrays, symbols and lists are encoded using [JS Binary](https://github.com/sitegui/js-binary) which has proven to be very quick and efficient.
