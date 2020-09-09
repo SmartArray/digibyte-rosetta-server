@@ -7,7 +7,11 @@
    DigiByte Rosetta Server (beta)
 </h3>
 <p align="center">
-DigiByte Rosetta Node offering a unified API according to the standard proposed by Coinbase.
+	Node Version: <pre>1.0.0</pre><br>
+	Rosetta Version: <pre>1.4.1</pre>
+</p>
+<p align="center">
+	DigiByte Rosetta Node offering a unified API according to the standard proposed by Coinbase.
 </p>
 
 > This implementation is a Proof-of-Concept implementation for the [NodeJS Rosetta SDK](https://github.com/SmartArray/digibyte-rosetta-nodeapi/tree/1.4.1) developed by DigiByte
