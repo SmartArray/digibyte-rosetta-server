@@ -1,7 +1,7 @@
 # UTXO Indexer Middleware
 
 ## Architecture
-![UTXO Indexer Middleware Architecture][images/utxoIndexer.png]
+![UTXO Indexer Middleware Architecture](images/utxoIndexer.png)
 
 ### Components
 - `BlockCache`: Caches up to 250 blocks that were received through the rpc interface. [syncBlockCache.js](../src/syncBlockCache.js) is a singleton instance for the Blockcache

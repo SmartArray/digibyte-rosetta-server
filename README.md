@@ -51,7 +51,7 @@ Currently, only the [Rosetta Data API](https://www.rosetta-api.org/docs/data_api
 This node implementation is using the experimental [Rosetta Node SDK](https://github.com/SmartArray/digibyte-rosetta-nodeapi/tree/1.4.1).
 
 A UTXO-Indexing Middleware was implemented to enable balance lookups. Historical balance lookups are supported as well.
-By using the `Syncer` class of the Rosetta SDK, the sync has become exceptionally reliable and even reorgs are supported very well. LevelDB (the same database that is being used in Bitcoin and its forks) is used to store the UTXO data. A space efficient encoding was chosen in order to avoid redundancy and to save some disk space (usage: 6.7G, as of 08th September, 2020).
+By using the `Syncer` class of the Rosetta SDK, the sync has become exceptionally reliable and even reorgs are supported very well. LevelDB (the same database that is being used in Bitcoin and its forks) is used to store the UTXO data. A space efficient encoding was chosen in order to avoid redundancy and to save some disk space (usage: 6.7G, as of 08th September, 2020), as described [here](docs/utxoIndexer.md).
 
 - [x] Fast, reliable sync
 - [x] Space efficient, non-redundant implementation
