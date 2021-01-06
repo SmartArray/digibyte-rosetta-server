@@ -28,7 +28,7 @@
   "author": "yoshijaeger",
   "license": "MIT",
   "devDependencies": {
-    "axios": "^0.20.0",
+    "axios": "^0.21.1",
     "chai": "^4.2.0",
     "eslint": "^7.7.0",
     "eslint-config-airbnb": "^18.2.0",
